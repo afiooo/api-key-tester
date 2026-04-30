@@ -1,0 +1,269 @@
+// ── Types ────────────────────────────────────────────────────────────
+
+export interface TestConfig {
+  baseUrl: string;
+  endpoint: string;
+  model: string;
+  authHeader: string;
+  authPrefix: string;
+  extraHeaders?: Record<string, string>;
+  queryParamAuth?: boolean;
+  provider?: string; // 'claude' for special 400 handling
+}
+
+export interface TestResult {
+  valid: boolean;
+  error: string | null;
+  isRateLimit: boolean;
+  statusCode?: number;
+  responseBody?: string;
+}
+
+export interface PaidTestResult {
+  isPaid: boolean | null;
+  error: string | null;
+  cacheApiStatus: number | null;
+}
+
+export interface BalanceResult {
+  success: boolean;
+  balance: string | null;
+  error: string | null;
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────
+
+function buildUrl(baseUrl: string, endpoint: string, model: string): string {
+  const base = baseUrl.replace(/\/+$/, '');
+  const ep = endpoint.replace('{model}', model);
+  return `${base}${ep.startsWith('/') ? ep : `/${ep}`}`;
+}
+
+function buildHeaders(config: TestConfig, key: string): Record<string, string> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+
+  if (!config.queryParamAuth && config.authHeader) {
+    const value = config.authPrefix ? `${config.authPrefix}${key}` : key;
+    headers[config.authHeader] = value;
+  }
+
+  const extras = config.extraHeaders || {};
+  for (const [k, v] of Object.entries(extras)) {
+    headers[k] = v;
+  }
+
+  return headers;
+}
+
+export function buildUrlWithAuth(baseUrl: string, endpoint: string, model: string, key: string, queryParamAuth: boolean): string {
+  let url = buildUrl(baseUrl, endpoint, model);
+  if (queryParamAuth) {
+    const sep = url.includes('?') ? '&' : '?';
+    url += `${sep}key=${encodeURIComponent(key)}`;
+  }
+  return url;
+}
+
+function buildPayload(config: TestConfig): string {
+  // Gemini uses a different format
+  if (config.queryParamAuth) {
+    return JSON.stringify({
+      contents: [{ parts: [{ text: 'Hi' }] }],
+    });
+  }
+  // OpenAI-compatible format (works for OpenAI, DeepSeek, SiliconCloud, xAI, OpenRouter, Claude)
+  return JSON.stringify({
+    model: config.model,
+    messages: [{ role: 'user', content: 'Hi' }],
+    max_tokens: 1,
+  });
+}
+
+// ── Core test function ────────────────────────────────────────────────
+
+export async function testKey(key: string, config: TestConfig): Promise<TestResult> {
+  const url = buildUrlWithAuth(config.baseUrl, config.endpoint, config.model, key, config.queryParamAuth || false);
+  const headers = buildHeaders(config, key);
+  const body = buildPayload(config);
+
+  let responseBody = '';
+  const result = (overrides: Partial<TestResult>): TestResult => ({
+    valid: false, error: null, isRateLimit: false, ...overrides, responseBody: responseBody || undefined,
+  });
+
+  try {
+    const res = await fetch(url, { method: 'POST', headers, body, signal: AbortSignal.timeout(30000) });
+    responseBody = await res.text();
+
+    if (res.status === 401) return result({ error: 'authFailed', statusCode: 401 });
+    if (res.status === 403) return result({ error: 'permissionDenied', statusCode: 403 });
+    if (res.status === 429) return result({ error: 'rateLimited', isRateLimit: true, statusCode: 429 });
+
+    if (res.status === 400 && config.provider === 'claude') {
+      try {
+        const data = JSON.parse(responseBody);
+        if (data?.error?.type === 'invalid_request_error') return result({ valid: true, statusCode: 400 });
+        if (data?.error?.type === 'authentication_error') return result({ error: 'authFailed', statusCode: 400 });
+        if (data?.error?.type === 'rate_limit_error') return result({ error: 'rateLimited', isRateLimit: true, statusCode: 400 });
+        return result({ error: `API错误: ${data?.error?.type || 'unknown'}`, statusCode: 400 });
+      } catch { return result({ error: 'parseError', statusCode: 400 }); }
+    }
+
+    if (!res.ok) return result({ error: 'httpError', statusCode: res.status });
+    if (!responseBody.trim()) return result({ error: 'emptyResponse' });
+
+    let data: Record<string, unknown> | undefined;
+    try { data = JSON.parse(responseBody); } catch { return result({ error: 'parseError' }); }
+
+    if (data?.error) {
+      const msg = (data.error as { message?: string; type?: string }).message || '';
+      const lower = msg.toLowerCase();
+      if (lower.includes('rate limit') || lower.includes('too many requests') || lower.includes('quota exceeded') || lower.includes('速率限制')) {
+        return result({ error: 'rateLimited', isRateLimit: true });
+      }
+      return result({ error: msg || '未知错误' });
+    }
+
+    if (data?.candidates && Array.isArray(data.candidates) && data.candidates.length > 0) {
+      return result({ valid: true, statusCode: res.status });
+    }
+    if (data?.choices && Array.isArray(data.choices)) {
+      return result({ valid: true, statusCode: res.status });
+    }
+    return result({ valid: true, statusCode: res.status });
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg.includes('timeout') || msg.includes('abort')) return result({ error: 'timeoutError' });
+    if (msg.includes('fetch') || msg.includes('network')) return result({ error: 'networkError' });
+    return result({ error: msg || 'unknownError' });
+  }
+}
+
+// ── Gemini Paid Detection ─────────────────────────────────────────────
+
+export async function testPaidKey(key: string, baseUrl: string): Promise<PaidTestResult> {
+  const url = `${baseUrl.replace(/\/+$/, '')}/cachedContents`;
+  const longText = Array(128).fill('You are an expert at analyzing transcripts.').join(' ');
+  const body = JSON.stringify({
+    model: 'models/gemini-2.5-flash',
+    contents: [{ parts: [{ text: longText }], role: 'user' }],
+    ttl: '30s',
+  });
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+      body,
+      signal: AbortSignal.timeout(30000),
+    });
+
+    if (res.ok) return { isPaid: true, error: null, cacheApiStatus: res.status };
+    if (res.status === 429) return { isPaid: false, error: 'rateLimited', cacheApiStatus: 429 };
+    if (res.status === 400 || res.status === 401 || res.status === 403) {
+      return { isPaid: false, error: 'accessDenied', cacheApiStatus: res.status };
+    }
+    return { isPaid: null, error: `HTTP ${res.status}`, cacheApiStatus: res.status };
+  } catch (e: unknown) {
+    return { isPaid: null, error: e instanceof Error ? e.message : String(e), cacheApiStatus: null };
+  }
+}
+
+// ── Model fetching ────────────────────────────────────────────────────
+
+export async function fetchModels(
+  key: string,
+  baseUrl: string,
+  authHeader: string,
+  authPrefix: string,
+  queryParamAuth: boolean,
+): Promise<string[]> {
+  const base = baseUrl.replace(/\/+$/, '');
+  let url = `${base}/models`;
+  const headers: Record<string, string> = {};
+
+  if (queryParamAuth) {
+    url += `?key=${encodeURIComponent(key)}`;
+  } else if (authHeader) {
+    headers[authHeader] = authPrefix ? `${authPrefix}${key}` : key;
+  }
+
+  try {
+    const res = await fetch(url, { headers, signal: AbortSignal.timeout(15000) });
+    if (!res.ok) return [];
+    const data = await res.json();
+
+    // OpenAI format: { data: [{ id: "..." }] }
+    if (data?.data && Array.isArray(data.data)) {
+      return data.data.map((m: { id: string }) => m.id).filter(Boolean);
+    }
+    // Gemini format: { models: [{ name: "models/..." }] }
+    if (data?.models && Array.isArray(data.models)) {
+      return data.models
+        .map((m: { name: string; supportedGenerationMethods?: string[] }) => {
+          if (m.supportedGenerationMethods && !m.supportedGenerationMethods.includes('generateContent')) return null;
+          return m.name.replace(/^models\//, '');
+        })
+        .filter(Boolean) as string[];
+    }
+    return [];
+  } catch {
+    return [];
+  }
+}
+
+// ── Balance query ─────────────────────────────────────────────────────
+
+export async function fetchBalance(
+  key: string,
+  baseUrl: string,
+  balanceEndpoint: string,
+  authHeader: string,
+  authPrefix: string,
+): Promise<BalanceResult> {
+  if (!balanceEndpoint) return { success: false, balance: null, error: '未配置余额端点' };
+
+  const base = baseUrl.replace(/\/+$/, '');
+  const ep = balanceEndpoint.startsWith('/') ? balanceEndpoint : `/${balanceEndpoint}`;
+  const url = `${base}${ep}`;
+  const headers: Record<string, string> = {};
+  if (authHeader) {
+    headers[authHeader] = authPrefix ? `${authPrefix}${key}` : key;
+  }
+
+  try {
+    const res = await fetch(url, { headers, signal: AbortSignal.timeout(10000) });
+    if (!res.ok) return { success: false, balance: null, error: `HTTP ${res.status}` };
+    const data = await res.json();
+
+    // Try common balance response formats
+    if (data?.data?.total_balance != null) return { success: true, balance: String(data.data.total_balance), error: null };
+    if (data?.balance != null) return { success: true, balance: String(data.balance), error: null };
+    if (data?.total_balance != null) return { success: true, balance: String(data.total_balance), error: null };
+    if (data?.data?.balance != null) return { success: true, balance: String(data.data.balance), error: null };
+    // DeepSeek: { balance_infos: [{ currency, total_balance, ... }] }
+    if (data?.balance_infos && Array.isArray(data.balance_infos) && data.balance_infos.length > 0) {
+      const info = data.balance_infos[0] as { currency?: string; total_balance?: string };
+      const bal = info.total_balance ?? '0';
+      const currency = info.currency ?? '';
+      return { success: true, balance: currency ? `${bal} ${currency}` : bal, error: null };
+    }
+
+    return { success: true, balance: JSON.stringify(data).slice(0, 200), error: null };
+  } catch (e: unknown) {
+    return { success: false, balance: null, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+// ── Retry logic ───────────────────────────────────────────────────────
+
+export function shouldRetry(error: string | null, statusCode?: number): boolean {
+  if (statusCode && [403, 502, 503, 504].includes(statusCode)) return true;
+  if (!error) return false;
+  const lower = error.toLowerCase();
+  return ['timeout', 'network', 'fetch', '连接', 'timeout'].some((k) => lower.includes(k));
+}
+
+export function getRetryDelay(): number {
+  return 300 + Math.random() * 500;
+}

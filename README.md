@@ -1,7 +1,7 @@
 <div align="center">
 
 # 🔑 API Key 测活工具
-> 一个现代化的在线工具，批量检测 OpenAI、Claude、Gemini API 密钥有效性
+> 一个现代化的在线工具，批量检测 OpenAI、Claude、Gemini 等 API 密钥有效性
 
 **中文** | [English](./README.en.md)
 
@@ -11,43 +11,41 @@
 
 [![License](https://img.shields.io/github/license/weiruchenai1/api-key-tester?style=flat&color=blue)](https://github.com/weiruchenai1/api-key-tester/blob/main/LICENSE)
 [![Node Version](https://img.shields.io/badge/node-%3E=20.19.0-brightgreen?style=flat&logo=node.js)](https://nodejs.org/)
-[![Top Language](https://img.shields.io/github/languages/top/weiruchenai1/api-key-tester?style=flat&logo=javascript&color=yellow)](https://github.com/weiruchenai1/api-key-tester)
+[![Top Language](https://img.shields.io/github/languages/top/weiruchenai1/api-key-tester?style=flat&logo=typescript&color=blue)](https://github.com/weiruchenai1/api-key-tester)
 
 [![在线使用](https://img.shields.io/badge/在线使用-GitHub%20Pages-blue?style=flat&logo=github)](https://weiruchenai1.github.io/api-key-tester)
-[![Deploy with Vercel](https://img.shields.io/badge/Deploy-Vercel-black?style=flat&logo=vercel)](https://vercel.com/new/clone?repository-url=https://github.com/weiruchenai1/api-key-tester)
 
 </div>
-
-## 📸 预览
-
-![预览图](./Preview.png)
 
 ## ✨ 功能
 
 - 🚀 批量测试多个 API 密钥
-- 🎯 支持 OpenAI、Claude、Gemini 等平台
+- 🎯 支持 OpenAI、Claude、Gemini、DeepSeek、SiliconCloud、xAI、OpenRouter
 - 🔄 智能重试机制，提高检测准确性
 - 🌐 中英文界面切换
-- 🌙 浅色/深色主题切换
+- 🌙 浅色/深色/跟随系统主题切换
 - 📊 实时统计和错误详情显示
-- 📋 一键复制有效/无效/速率限制密钥
-- 🎛️ 支持输入自定义模型名称
+- 📋 按状态分组复制密钥（全部/有效/无效/速率限制/付费）
+- 🎛️ 支持自定义模型名称和检测到的模型
 - ⚡ 可调节并发数和重试次数
+- 💰 Gemini 付费 Key 检测
+- 📝 可选的详细 API 调用日志
+- 🔧 可自定义 API 提供商配置
 - 💻 纯前端，无需安装
 
 ## 🚀 使用
 
 1. 访问：**https://weiruchenai1.github.io/api-key-tester**
-2. 选择 API 类型
-3. 填写代理服务器 URL（必需）
-4. 粘贴或者导入（.txt） API 密钥列表
-5. 使用预设模型或输入自定义模型名
-6. 根据需要选择合适的并发数和重试次数
+2. 选择 API 提供商（左侧边栏）
+3. 填写 API 地址（可选，默认使用官方地址）
+4. 粘贴或导入（.txt）API 密钥列表
+5. 选择或自定义测试模型
+6. 根据需要调整并发数和重试次数
 7. 点击开始测试
 
 ## ⚠️ 重要提醒
 
-由于浏览器 CORS 限制，必须使用代理服务器：
+由于浏览器 CORS 限制，直接调用官方 API 可能被拦截：
 
 **公共代理风险提醒：**
 - ⚠️ **安全风险**：API密钥可能被代理服务器记录
@@ -65,7 +63,7 @@
 - 一台海外服务器（VPS）
 - 一个域名，并将以下子域名解析到服务器IP：
   - `openai.your-domain.com`
-  - `claude.your-domain.com` 
+  - `claude.your-domain.com`
   - `gemini.your-domain.com`
 
 **1. 安装 Nginx**
@@ -93,14 +91,14 @@ sudo nano /etc/nginx/sites-available/openai-proxy
 server {
     listen 443 ssl;
     server_name openai.your-domain.com;
-    
+
     ssl_certificate /etc/letsencrypt/live/claude.your-domain.com/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/claude.your-domain.com/privkey.pem;
-    
+
     location / {
         # DNS解析器，禁用IPv6
         resolver 8.8.8.8 ipv6=off;
-        
+
         # 反向代理配置
         proxy_pass https://api.openai.com/;
         proxy_ssl_server_name on;
@@ -108,13 +106,13 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        
+
         # 隐藏后端服务器的CORS头，避免重复
         proxy_hide_header Access-Control-Allow-Origin;
         proxy_hide_header Access-Control-Allow-Methods;
         proxy_hide_header Access-Control-Allow-Headers;
         proxy_hide_header Access-Control-Allow-Credentials;
-        
+
         # 处理OPTIONS预检请求
         if ($request_method = 'OPTIONS') {
             add_header Access-Control-Allow-Origin *;
@@ -123,7 +121,7 @@ server {
             add_header Access-Control-Max-Age 86400;
             return 204;
         }
-        
+
         # 为所有其他请求添加CORS头
         add_header Access-Control-Allow-Origin * always;
         add_header Access-Control-Allow-Methods 'GET, POST, PUT, DELETE, OPTIONS' always;
@@ -143,14 +141,14 @@ sudo nano /etc/nginx/sites-available/claude-proxy
 server {
     listen 443 ssl;
     server_name claude.your-domain.com;
-    
+
     ssl_certificate /etc/letsencrypt/live/claude.your-domain.com/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/claude.your-domain.com/privkey.pem;
-    
+
     location / {
         # DNS解析器，禁用IPv6
         resolver 8.8.8.8 ipv6=off;
-        
+
         # 反向代理配置
         proxy_pass https://api.anthropic.com/;
         proxy_ssl_server_name on;
@@ -158,13 +156,13 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        
+
         # 隐藏后端服务器的CORS头，避免重复
         proxy_hide_header Access-Control-Allow-Origin;
         proxy_hide_header Access-Control-Allow-Methods;
         proxy_hide_header Access-Control-Allow-Headers;
         proxy_hide_header Access-Control-Allow-Credentials;
-        
+
         # 处理OPTIONS预检请求
         if ($request_method = 'OPTIONS') {
             add_header Access-Control-Allow-Origin *;
@@ -173,7 +171,7 @@ server {
             add_header Access-Control-Max-Age 86400;
             return 204;
         }
-        
+
         # 为所有其他请求添加CORS头
         add_header Access-Control-Allow-Origin * always;
         add_header Access-Control-Allow-Methods 'GET, POST, PUT, DELETE, OPTIONS' always;
@@ -193,14 +191,14 @@ sudo nano /etc/nginx/sites-available/gemini-proxy
 server {
     listen 443 ssl;
     server_name gemini.your-domain.com;
-    
+
     ssl_certificate /etc/letsencrypt/live/claude.your-domain.com/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/claude.your-domain.com/privkey.pem;
-    
+
     location / {
         # DNS解析器，禁用IPv6
         resolver 8.8.8.8 ipv6=off;
-        
+
         # 反向代理配置
         proxy_pass https://generativelanguage.googleapis.com/;
         proxy_ssl_server_name on;
@@ -208,13 +206,13 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        
+
         # 隐藏后端服务器的CORS头，避免重复
         proxy_hide_header Access-Control-Allow-Origin;
         proxy_hide_header Access-Control-Allow-Methods;
         proxy_hide_header Access-Control-Allow-Headers;
         proxy_hide_header Access-Control-Allow-Credentials;
-        
+
         # 处理OPTIONS预检请求
         if ($request_method = 'OPTIONS') {
             add_header Access-Control-Allow-Origin *;
@@ -223,7 +221,7 @@ server {
             add_header Access-Control-Max-Age 86400;
             return 204;
         }
-        
+
         # 为所有其他请求添加CORS头
         add_header Access-Control-Allow-Origin * always;
         add_header Access-Control-Allow-Methods 'GET, POST, PUT, DELETE, OPTIONS' always;
@@ -254,7 +252,7 @@ sudo nginx -s reload  # 重新加载配置
 **代理地址：**
 测试成功后，在API Key测试工具中使用以下代理地址：
 - OpenAI: `https://openai.your-domain.com/v1`
-- Claude: `https://claude.your-domain.com/v1`  
+- Claude: `https://claude.your-domain.com/v1`
 - Gemini: `https://gemini.your-domain.com/v1`
 
 </details>
@@ -278,7 +276,7 @@ npm install
 npm run dev
 ```
 
-应用将在 http://localhost:3000 启动
+应用将在 http://localhost:5173 启动
 
 ### 构建生产版本
 
@@ -299,8 +297,6 @@ docker run -d \
   --restart unless-stopped \
   ghcr.io/weiruchenai1/api-key-tester:latest
 ```
-
-访问 http://localhost:8080
 
 ### 2. Docker Compose 部署
 
@@ -352,14 +348,9 @@ services:
 
 ### 5. 静态文件服务器部署
 
-适用于任何支持静态文件的服务器：
-
 ```bash
-# 构建项目
 npm run build
-
-# 将 dist 目录的内容上传到你的 Web 服务器
-# 确保服务器配置了正确的路由规则（SPA 支持）
+# 将 dist/ 目录部署到任意静态文件服务器
 ```
 
 **Nginx 配置示例：**
@@ -369,12 +360,11 @@ server {
     server_name your-domain.com;
     root /path/to/dist;
     index index.html;
-    
+
     location / {
         try_files $uri $uri/ /index.html;
     }
-    
-    # 启用 gzip 压缩
+
     gzip on;
     gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
 }
@@ -396,7 +386,10 @@ server {
 ## 🛠️ 技术栈
 
 - **前端框架**: React 19
+- **类型系统**: TypeScript
+- **样式方案**: Tailwind CSS 4
 - **构建工具**: Vite 7
+- **国际化**: i18next
 
 ## 📄 许可证
 

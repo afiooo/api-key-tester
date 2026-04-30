@@ -1,7 +1,7 @@
 <div align="center">
 
 # 🔑 API Key Tester
-> A modern online tool for batch testing OpenAI, Claude, and Gemini API key validity
+> A modern online tool for batch testing API key validity across multiple LLM providers
 
 [中文](./README.md) | **English**
 
@@ -11,43 +11,42 @@
 
 [![License](https://img.shields.io/github/license/weiruchenai1/api-key-tester?style=flat&color=blue)](https://github.com/weiruchenai1/api-key-tester/blob/main/LICENSE)
 [![Node Version](https://img.shields.io/badge/node-%3E=20.19.0-brightgreen?style=flat&logo=node.js)](https://nodejs.org/)
-[![Top Language](https://img.shields.io/github/languages/top/weiruchenai1/api-key-tester?style=flat&logo=javascript&color=yellow)](https://github.com/weiruchenai1/api-key-tester)
+[![Top Language](https://img.shields.io/github/languages/top/weiruchenai1/api-key-tester?style=flat&logo=typescript&color=blue)](https://github.com/weiruchenai1/api-key-tester)
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-blue?style=flat&logo=github)](https://weiruchenai1.github.io/api-key-tester)
 [![Deploy with Vercel](https://img.shields.io/badge/Deploy-Vercel-black?style=flat&logo=vercel)](https://vercel.com/new/clone?repository-url=https://github.com/weiruchenai1/api-key-tester)
 
 </div>
 
-## 📸 Preview
-
-![Preview](./Preview.en.png)
-
 ## ✨ Features
 
 - 🚀 Batch test multiple API keys
-- 🎯 Support for OpenAI, Claude, Gemini and other platforms
+- 🎯 Support for OpenAI, Claude, Gemini, DeepSeek, SiliconCloud, xAI, OpenRouter
 - 🔄 Smart retry mechanism for improved detection accuracy
 - 🌐 Bilingual interface (Chinese/English)
-- 🌙 Light/Dark theme toggle
+- 🌙 Light/Dark/System theme toggle
 - 📊 Real-time statistics and error details
-- 📋 One-click copy for valid/invalid/rate-limited keys
-- 🎛️ Support for custom model names
+- 📋 Copy keys by status group (all/valid/invalid/rate-limited/paid)
+- 🎛️ Custom model names and auto-detected models
 - ⚡ Adjustable concurrency and retry count
+- 💰 Gemini paid key detection
+- 📝 Optional verbose API call logging
+- 🔧 Customizable API provider configuration
 - 💻 Frontend-only, no installation required
 
 ## 🚀 Usage
 
 1. Visit: **https://weiruchenai1.github.io/api-key-tester**
-2. Select API type
-3. Enter proxy server URL (required)
+2. Select API provider (left sidebar)
+3. Enter API address (optional, uses official endpoint by default)
 4. Paste or import (.txt) API key list
-5. Use preset models or enter custom model name
-6. Choose appropriate concurrency and retry count
+5. Select or enter custom model name
+6. Adjust concurrency and retry count as needed
 7. Click start testing
 
 ## ⚠️ Important Notice
 
-Due to browser CORS restrictions, a proxy server is required:
+Due to browser CORS restrictions, direct API calls may be blocked:
 
 **Public Proxy Risks:**
 - ⚠️ **Security Risk**: API keys may be logged by proxy servers
@@ -65,7 +64,7 @@ If you have your own overseas server, you can use Nginx to set up a reverse prox
 - An overseas server (VPS)
 - A domain with the following subdomains pointing to your server IP:
   - `openai.your-domain.com`
-  - `claude.your-domain.com` 
+  - `claude.your-domain.com`
   - `gemini.your-domain.com`
 
 **1. Install Nginx**
@@ -93,14 +92,14 @@ sudo nano /etc/nginx/sites-available/openai-proxy
 server {
     listen 443 ssl;
     server_name openai.your-domain.com;
-    
+
     ssl_certificate /etc/letsencrypt/live/claude.your-domain.com/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/claude.your-domain.com/privkey.pem;
-    
+
     location / {
         # DNS resolver, disable IPv6
         resolver 8.8.8.8 ipv6=off;
-        
+
         # Reverse proxy configuration
         proxy_pass https://api.openai.com/;
         proxy_ssl_server_name on;
@@ -108,13 +107,13 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        
+
         # Hide backend server CORS headers to avoid duplication
         proxy_hide_header Access-Control-Allow-Origin;
         proxy_hide_header Access-Control-Allow-Methods;
         proxy_hide_header Access-Control-Allow-Headers;
         proxy_hide_header Access-Control-Allow-Credentials;
-        
+
         # Handle OPTIONS preflight requests
         if ($request_method = 'OPTIONS') {
             add_header Access-Control-Allow-Origin *;
@@ -123,7 +122,7 @@ server {
             add_header Access-Control-Max-Age 86400;
             return 204;
         }
-        
+
         # Add CORS headers for all other requests
         add_header Access-Control-Allow-Origin * always;
         add_header Access-Control-Allow-Methods 'GET, POST, PUT, DELETE, OPTIONS' always;
@@ -143,14 +142,14 @@ Add the following content:
 server {
     listen 443 ssl;
     server_name claude.your-domain.com;
-    
+
     ssl_certificate /etc/letsencrypt/live/claude.your-domain.com/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/claude.your-domain.com/privkey.pem;
-    
+
     location / {
         # DNS resolver, disable IPv6
         resolver 8.8.8.8 ipv6=off;
-        
+
         # Reverse proxy configuration
         proxy_pass https://api.anthropic.com/;
         proxy_ssl_server_name on;
@@ -158,13 +157,13 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        
+
         # Hide backend server CORS headers to avoid duplication
         proxy_hide_header Access-Control-Allow-Origin;
         proxy_hide_header Access-Control-Allow-Methods;
         proxy_hide_header Access-Control-Allow-Headers;
         proxy_hide_header Access-Control-Allow-Credentials;
-        
+
         # Handle OPTIONS preflight requests
         if ($request_method = 'OPTIONS') {
             add_header Access-Control-Allow-Origin *;
@@ -173,7 +172,7 @@ server {
             add_header Access-Control-Max-Age 86400;
             return 204;
         }
-        
+
         # Add CORS headers for all other requests
         add_header Access-Control-Allow-Origin * always;
         add_header Access-Control-Allow-Methods 'GET, POST, PUT, DELETE, OPTIONS' always;
@@ -193,14 +192,14 @@ Add the following content:
 server {
     listen 443 ssl;
     server_name gemini.your-domain.com;
-    
+
     ssl_certificate /etc/letsencrypt/live/claude.your-domain.com/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/claude.your-domain.com/privkey.pem;
-    
+
     location / {
         # DNS resolver, disable IPv6
         resolver 8.8.8.8 ipv6=off;
-        
+
         # Reverse proxy configuration
         proxy_pass https://generativelanguage.googleapis.com/;
         proxy_ssl_server_name on;
@@ -208,13 +207,13 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        
+
         # Hide backend server CORS headers to avoid duplication
         proxy_hide_header Access-Control-Allow-Origin;
         proxy_hide_header Access-Control-Allow-Methods;
         proxy_hide_header Access-Control-Allow-Headers;
         proxy_hide_header Access-Control-Allow-Credentials;
-        
+
         # Handle OPTIONS preflight requests
         if ($request_method = 'OPTIONS') {
             add_header Access-Control-Allow-Origin *;
@@ -223,7 +222,7 @@ server {
             add_header Access-Control-Max-Age 86400;
             return 204;
         }
-        
+
         # Add CORS headers for all other requests
         add_header Access-Control-Allow-Origin * always;
         add_header Access-Control-Allow-Methods 'GET, POST, PUT, DELETE, OPTIONS' always;
@@ -254,7 +253,7 @@ sudo nginx -s reload  # Reload configuration
 **Proxy URLs:**
 After successful testing, use the following proxy URLs in the API Key tester:
 - OpenAI: `https://openai.your-domain.com/v1`
-- Claude: `https://claude.your-domain.com/v1`  
+- Claude: `https://claude.your-domain.com/v1`
 - Gemini: `https://gemini.your-domain.com/v1`
 
 </details>
@@ -278,7 +277,7 @@ npm install
 npm run dev
 ```
 
-The application will start at http://localhost:3000
+The application will start at http://localhost:5173
 
 ### Build for Production
 
@@ -340,7 +339,7 @@ services:
 4. Select your forked repository
 5. Configure build settings:
    - **Build command**: `npm run build`
-   - **Build output directory**: `build`
+   - **Build output directory**: `dist`
    - **Node.js version**: `20` or higher
 6. Click `Save and Deploy`
 
@@ -358,7 +357,7 @@ Suitable for any server that supports static files:
 # Build project
 npm run build
 
-# Upload the contents of build directory to your web server
+# Upload the contents of dist directory to your web server
 # Ensure server is configured with proper routing rules (SPA support)
 ```
 
@@ -367,13 +366,13 @@ npm run build
 server {
     listen 80;
     server_name your-domain.com;
-    root /path/to/build;
+    root /path/to/dist;
     index index.html;
-    
+
     location / {
         try_files $uri $uri/ /index.html;
     }
-    
+
     # Enable gzip compression
     gzip on;
     gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
@@ -395,7 +394,11 @@ server {
 
 ## 🛠️ Tech Stack
 
-Pure frontend: HTML + CSS + JavaScript
+- **Frontend Framework**: React 19
+- **Type System**: TypeScript
+- **Styling**: Tailwind CSS 4
+- **Build Tool**: Vite 7
+- **i18n**: i18next
 
 ## 📄 License
 

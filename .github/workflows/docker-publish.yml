@@ -29,7 +29,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # experimental 分支：仅推送 SHA 标签（避免污染 latest）
+      # experimental branch: SHA tag only
       - name: Build and push (experimental)
         if: github.ref == 'refs/heads/experimental'
         uses: docker/build-push-action@v5
@@ -43,7 +43,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # main 分支：推送 latest 与 SHA 标签（正式发布）
+      # main branch: latest + SHA tags
       - name: Build and push (main)
         if: github.ref == 'refs/heads/main'
         uses: docker/build-push-action@v5
