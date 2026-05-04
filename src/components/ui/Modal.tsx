@@ -1,5 +1,6 @@
 import { useEffect, type ReactNode } from 'react';
 import { X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 
 interface ModalProps {
@@ -11,6 +12,7 @@ interface ModalProps {
 }
 
 export function Modal({ open, onClose, title, children, className }: ModalProps) {
+  const { t } = useTranslation();
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -49,7 +51,7 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
             <button
               type="button"
               onClick={onClose}
-              aria-label="关闭"
+              aria-label={t('close')}
               className="text-fg hover:opacity-70 cursor-pointer"
             >
               <X size={24} strokeWidth={2} />

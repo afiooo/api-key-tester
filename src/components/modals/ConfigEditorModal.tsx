@@ -8,6 +8,7 @@ import { Dropdown, DropdownItem } from '@/components/ui/Dropdown';
 import { ChevronDown, Check } from 'lucide-react';
 import type { ProviderConfig, ProviderType } from '@/types/provider';
 import { PROVIDER_PRESETS } from '@/data/providerPresets';
+import { toast } from '@/lib/toast';
 
 const PROVIDER_TYPES: ProviderType[] = [
   'openai', 'claude', 'gemini', 'deepseek',
@@ -41,7 +42,7 @@ export function ConfigEditorModal({ open, onClose, onSave, config }: ConfigEdito
   const initialProvider = getInitialProvider();
   const initialPreset = PROVIDER_PRESETS[initialProvider];
 
-  const [name, setName] = useState(config?.name || '');
+  const [name, setName] = useState(config?.name || initialPreset.name);
   const [provider, setProvider] = useState<ProviderType>(initialProvider);
   const [baseUrl, setBaseUrl] = useState(config?.baseUrl ?? '');
   const [presetModels, setPresetModels] = useState(config?.presetModels || initialPreset.modelOptions.join(', '));
@@ -71,10 +72,14 @@ export function ConfigEditorModal({ open, onClose, onSave, config }: ConfigEdito
   };
 
   const handleSave = () => {
+    const trimmedName = name.trim();
+    const trimmedBaseUrl = baseUrl.trim();
+    if (!trimmedName) { toast.error(t('emptyConfigName')); return; }
+    if (!trimmedBaseUrl) { toast.error(t('emptyBaseUrl')); return; }
     onSave({
-      name: name.trim(),
+      name: trimmedName,
       provider,
-      baseUrl: baseUrl.trim(),
+      baseUrl: trimmedBaseUrl,
       presetModels: presetModels.trim(),
       testEndpoint: testEndpoint.trim(),
       authHeader: authHeader.trim(),
@@ -86,10 +91,10 @@ export function ConfigEditorModal({ open, onClose, onSave, config }: ConfigEdito
 
   return (
     <Modal open={open} onClose={onClose} title={isEdit ? t('modal.editConfig') : t('modal.newConfig')}>
-      <div className="flex flex-col gap-4 max-h-[70vh] overflow-y-auto pr-1">
+      <div className="flex flex-col gap-4">
         {/* 名称 + 提供商 */}
-        <Field label={t('modal.configName')}>
-          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={preset.name} />
+        <Field label={t('modal.configName')} required>
+          <Input value={name} onChange={(e) => setName(e.target.value)} />
         </Field>
 
         <Field label={t('selectApi')}>
@@ -121,38 +126,37 @@ export function ConfigEditorModal({ open, onClose, onSave, config }: ConfigEdito
         </Field>
 
         {/* API 地址 */}
-        <Field label={t('modal.apiAddress')}>
+        <Field label={t('modal.apiAddress')} required>
           <Input
             value={baseUrl}
             onChange={(e) => setBaseUrl(e.target.value)}
-            placeholder={preset.defaultBaseUrl}
           />
         </Field>
 
         {/* 测试端点 */}
-        <Field label="测试端点">
-          <Input value={testEndpoint} onChange={(e) => setTestEndpoint(e.target.value)} placeholder={preset.defaultEndpoint} />
+        <Field label={t('modal.testEndpoint')}>
+          <Input value={testEndpoint} onChange={(e) => setTestEndpoint(e.target.value)} />
         </Field>
 
         {/* Auth 配置 */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Auth Header">
-            <Input value={authHeader} onChange={(e) => setAuthHeader(e.target.value)} placeholder={preset.defaultAuthHeader || 'Authorization'} />
+          <Field label={t('modal.authHeader')}>
+            <Input value={authHeader} onChange={(e) => setAuthHeader(e.target.value)} />
           </Field>
-          <Field label="Auth 前缀">
-            <Input value={authPrefix} onChange={(e) => setAuthPrefix(e.target.value)} placeholder={preset.defaultAuthPrefix || 'Bearer '} />
+          <Field label={t('modal.authPrefix')}>
+            <Input value={authPrefix} onChange={(e) => setAuthPrefix(e.target.value)} />
           </Field>
         </div>
 
         {/* Query Param Auth */}
         <div className="flex items-center justify-between gap-4 py-1">
-          <span className="text-btn font-bold text-fg">Key 作为 URL 参数 (?key=)</span>
-          <Toggle checked={queryParamAuth} onChange={setQueryParamAuth} label="Key 作为 URL 参数" />
+          <span className="text-btn font-bold text-fg">{t('modal.queryParamAuth')}</span>
+          <Toggle checked={queryParamAuth} onChange={setQueryParamAuth} label={t('modal.queryParamAuthLabel')} />
         </div>
 
         {/* 额外 Headers */}
-        <Field label="额外 Headers (JSON)">
-          <Input value={extraHeaders} onChange={(e) => setExtraHeaders(e.target.value)} placeholder='{"header-name":"value"}' />
+        <Field label={t('modal.extraHeaders')}>
+          <Input value={extraHeaders} onChange={(e) => setExtraHeaders(e.target.value)} />
         </Field>
 
         {/* 预设模型 */}

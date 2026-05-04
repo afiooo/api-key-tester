@@ -99,6 +99,10 @@
   "enterApiKeys": "请输入API密钥！",
   "enterValidKeys": "请输入有效的API密钥！",
   "enterApiKeysFirst": "请先输入API密钥！",
+  "emptyBaseUrl": "请填写 API 地址",
+  "emptyConfigName": "请填写配置名称",
+  "emptyEndpoint": "请填写测试端点",
+  "emptyAuthHeader": "请填写 Auth Header（或在配置中开启 URL 参数鉴权）",
   "noKeysToCopy": "没有可复制的密钥！",
   "keysCopied": "已复制 {count} 个密钥到剪贴板！",
   "duplicatesRemoved": "发现 {duplicates} 个重复密钥，已自动去除。将测试 {unique} 个唯一密钥。",
@@ -156,14 +160,6 @@
     "parseError": "JSON解析失败",
     "timeoutError": "请求超时"
   },
-  "paidDetectionDialog": {
-    "title": "测试Gemini付费Key",
-    "description": "如果要测试Gemini的付费Key，需要消耗一定的Token来检测Key是否有访问付费功能的能力。",
-    "warning": "⚠️ 付费检测会使用Cache API，可能会消耗额外的API配额。",
-    "dontShowAgain": "不再提示此消息（可在高级设置中更改）",
-    "confirmButton": "是，启用付费检测",
-    "cancelButton": "否，不检测付费功能"
-  },
   "keyStatus": {
     "validKey": "有效密钥",
     "paidKey": "付费密钥",
@@ -177,19 +173,6 @@
     "englishName": "English",
     "loading": "加载中...",
     "retry": "重试"
-  },
-  "paidDetectionSettings": {
-    "description": "启用后将使用Cache API检测Gemini密钥的付费功能，会消耗额外配额",
-    "popupSettings": "弹窗提示设置",
-    "resetPopup": "重置弹窗提示",
-    "resetDescription": "重置后，下次选择Gemini时将重新显示付费检测询问弹窗",
-    "currentApiType": "当前API类型",
-    "detectionStatus": "付费检测状态",
-    "fixedModel": "固定模型",
-    "resetModalTitle": "重置弹窗提示设置",
-    "resetModalMessage": "确定要重置弹窗提示设置吗？重置后，下次选择Gemini时将重新显示付费检测询问弹窗。",
-    "confirm": "确定",
-    "cancel": "取消"
   },
   "results": {
     "logTooltip": "提示：点击测试结果卡片即可查看对应 key 的测试日志。"
@@ -216,6 +199,17 @@
     "presetModels": "预设模型",
     "create": "创建",
     "saveChanges": "保存修改",
-    "confirmDelete": "确定要删除该配置吗？"
+    "confirmDelete": "确定要删除该配置吗？",
+    "testEndpoint": "测试端点",
+    "authHeader": "Auth Header",
+    "authPrefix": "Auth 前缀",
+    "queryParamAuth": "Key 作为 URL 参数 (?key=)",
+    "queryParamAuthLabel": "Key 作为 URL 参数",
+    "extraHeaders": "额外 Headers (JSON)"
+  },
+  "errorBoundary": {
+    "title": "应用出现错误",
+    "description": "发生了意外错误，请尝试刷新页面。",
+    "refreshButton": "刷新页面"
   }
 }

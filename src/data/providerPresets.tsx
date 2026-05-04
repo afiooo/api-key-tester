@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import type { ProviderType } from '@/types/provider';
+import { SvgIcon } from './providerIcons';
 
 export interface ProviderPreset {
   name: string;
@@ -20,18 +21,6 @@ export interface ProviderPreset {
   /** Whether key goes in URL query param */
   defaultQueryParamAuth: boolean;
 }
-
-const SvgIcon = ({ children, viewBox = '0 0 24 24' }: { children: ReactNode; viewBox?: string }) => (
-  <svg
-    height="16"
-    viewBox={viewBox}
-    width="16"
-    xmlns="http://www.w3.org/2000/svg"
-    style={{ flex: '0 0 auto', lineHeight: 1 }}
-  >
-    {children}
-  </svg>
-);
 
 export const PROVIDER_PRESETS: Record<ProviderType, ProviderPreset> = {
   openai: {
@@ -211,7 +200,7 @@ export const PROVIDER_PRESETS: Record<ProviderType, ProviderPreset> = {
     defaultAuthHeader: 'Authorization',
     defaultAuthPrefix: 'Bearer ',
     defaultBalanceEndpoint: '',
-    defaultExtraHeaders: '{"HTTP-Referer":"https://api-key-tester.com","X-Title":"API Key Tester"}',
+    defaultExtraHeaders: '',
     defaultQueryParamAuth: false,
     modelOptions: ['deepseek/deepseek-chat-v3.1:free'],
     icon: (

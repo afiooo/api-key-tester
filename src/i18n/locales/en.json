@@ -99,6 +99,10 @@
   "enterApiKeys": "Please enter API keys!",
   "enterValidKeys": "Please enter valid API keys!",
   "enterApiKeysFirst": "Please enter API keys first!",
+  "emptyBaseUrl": "API base URL is required",
+  "emptyConfigName": "Config name is required",
+  "emptyEndpoint": "Test endpoint is required",
+  "emptyAuthHeader": "Auth Header is required (or enable URL-param auth in config)",
   "noKeysToCopy": "No keys to copy!",
   "keysCopied": "Copied {count} keys to clipboard!",
   "duplicatesRemoved": "Found {duplicates} duplicate keys, automatically removed. Will test {unique} unique keys.",
@@ -156,14 +160,6 @@
     "parseError": "JSON Parse Error",
     "timeoutError": "Request Timeout"
   },
-  "paidDetectionDialog": {
-    "title": "Test Gemini Paid Keys",
-    "description": "To test Gemini paid keys, some tokens need to be consumed to detect if the key has access to paid features.",
-    "warning": "⚠️ Paid detection will use Cache API and may consume additional API quota.",
-    "dontShowAgain": "Don't show this message again (can be changed in advanced settings)",
-    "confirmButton": "Yes, enable paid detection",
-    "cancelButton": "No, don't detect paid features"
-  },
   "keyStatus": {
     "validKey": "Valid Key",
     "paidKey": "Paid Key",
@@ -177,19 +173,6 @@
     "englishName": "English",
     "loading": "Loading...",
     "retry": "Retry"
-  },
-  "paidDetectionSettings": {
-    "description": "When enabled, Cache API will be used to detect paid functionality of Gemini keys, consuming additional quota",
-    "popupSettings": "Popup Settings",
-    "resetPopup": "Reset Popup",
-    "resetDescription": "After reset, the paid detection dialog will show again next time you select Gemini",
-    "currentApiType": "Current API Type",
-    "detectionStatus": "Detection Status",
-    "fixedModel": "Fixed Model",
-    "resetModalTitle": "Reset Popup Settings",
-    "resetModalMessage": "Are you sure to reset popup settings? After reset, the paid detection dialog will show again next time you select Gemini.",
-    "confirm": "Confirm",
-    "cancel": "Cancel"
   },
   "results": {
     "logTooltip": "Tip: Click a test result card to view the log for that key."
@@ -216,6 +199,17 @@
     "presetModels": "Preset Models",
     "create": "Create",
     "saveChanges": "Save Changes",
-    "confirmDelete": "Are you sure you want to delete this config?"
+    "confirmDelete": "Are you sure you want to delete this config?",
+    "testEndpoint": "Test Endpoint",
+    "authHeader": "Auth Header",
+    "authPrefix": "Auth Prefix",
+    "queryParamAuth": "Use key as URL parameter (?key=)",
+    "queryParamAuthLabel": "Use key as URL parameter",
+    "extraHeaders": "Extra Headers (JSON)"
+  },
+  "errorBoundary": {
+    "title": "Application Error",
+    "description": "An unexpected error occurred. Please try refreshing the page.",
+    "refreshButton": "Refresh Page"
   }
 }

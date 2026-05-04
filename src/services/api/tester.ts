@@ -64,6 +64,14 @@ export function buildUrlWithAuth(baseUrl: string, endpoint: string, model: strin
   return url;
 }
 
+/**
+ * Remove API keys from URLs before logging/displaying.
+ * Masks query params like ?key=... or &key=... and any param ending with "key"/"token".
+ */
+export function maskUrlSecrets(url: string): string {
+  return url.replace(/([?&])([^=&]*?(?:key|token)[^=&]*?)=([^&]+)/gi, '$1$2=***');
+}
+
 function buildPayload(config: TestConfig): string {
   // Gemini uses a different format
   if (config.queryParamAuth) {
@@ -79,9 +87,15 @@ function buildPayload(config: TestConfig): string {
   });
 }
 
+/** Combine an optional external cancellation signal with a timeout signal. */
+function combineSignals(externalSignal: AbortSignal | undefined, timeoutMs: number): AbortSignal {
+  const timeoutSignal = AbortSignal.timeout(timeoutMs);
+  return externalSignal ? AbortSignal.any([externalSignal, timeoutSignal]) : timeoutSignal;
+}
+
 // ── Core test function ────────────────────────────────────────────────
 
-export async function testKey(key: string, config: TestConfig): Promise<TestResult> {
+export async function testKey(key: string, config: TestConfig, externalSignal?: AbortSignal): Promise<TestResult> {
   const url = buildUrlWithAuth(config.baseUrl, config.endpoint, config.model, key, config.queryParamAuth || false);
   const headers = buildHeaders(config, key);
   const body = buildPayload(config);
@@ -92,7 +106,7 @@ export async function testKey(key: string, config: TestConfig): Promise<TestResu
   });
 
   try {
-    const res = await fetch(url, { method: 'POST', headers, body, signal: AbortSignal.timeout(30000) });
+    const res = await fetch(url, { method: 'POST', headers, body, signal: combineSignals(externalSignal, 30000) });
     responseBody = await res.text();
 
     if (res.status === 401) return result({ error: 'authFailed', statusCode: 401 });
@@ -105,7 +119,7 @@ export async function testKey(key: string, config: TestConfig): Promise<TestResu
         if (data?.error?.type === 'invalid_request_error') return result({ valid: true, statusCode: 400 });
         if (data?.error?.type === 'authentication_error') return result({ error: 'authFailed', statusCode: 400 });
         if (data?.error?.type === 'rate_limit_error') return result({ error: 'rateLimited', isRateLimit: true, statusCode: 400 });
-        return result({ error: `API错误: ${data?.error?.type || 'unknown'}`, statusCode: 400 });
+        return result({ error: `API error: ${data?.error?.type || 'unknown'}`, statusCode: 400 });
       } catch { return result({ error: 'parseError', statusCode: 400 }); }
     }
 
@@ -121,7 +135,7 @@ export async function testKey(key: string, config: TestConfig): Promise<TestResu
       if (lower.includes('rate limit') || lower.includes('too many requests') || lower.includes('quota exceeded') || lower.includes('速率限制')) {
         return result({ error: 'rateLimited', isRateLimit: true });
       }
-      return result({ error: msg || '未知错误' });
+      return result({ error: msg || 'unknownError' });
     }
 
     if (data?.candidates && Array.isArray(data.candidates) && data.candidates.length > 0) {
@@ -141,7 +155,7 @@ export async function testKey(key: string, config: TestConfig): Promise<TestResu
 
 // ── Gemini Paid Detection ─────────────────────────────────────────────
 
-export async function testPaidKey(key: string, baseUrl: string): Promise<PaidTestResult> {
+export async function testPaidKey(key: string, baseUrl: string, externalSignal?: AbortSignal): Promise<PaidTestResult> {
   const url = `${baseUrl.replace(/\/+$/, '')}/cachedContents`;
   const longText = Array(128).fill('You are an expert at analyzing transcripts.').join(' ');
   const body = JSON.stringify({
@@ -155,7 +169,7 @@ export async function testPaidKey(key: string, baseUrl: string): Promise<PaidTes
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
       body,
-      signal: AbortSignal.timeout(30000),
+      signal: combineSignals(externalSignal, 30000),
     });
 
     if (res.ok) return { isPaid: true, error: null, cacheApiStatus: res.status };
@@ -177,6 +191,7 @@ export async function fetchModels(
   authHeader: string,
   authPrefix: string,
   queryParamAuth: boolean,
+  externalSignal?: AbortSignal,
 ): Promise<string[]> {
   const base = baseUrl.replace(/\/+$/, '');
   let url = `${base}/models`;
@@ -189,7 +204,7 @@ export async function fetchModels(
   }
 
   try {
-    const res = await fetch(url, { headers, signal: AbortSignal.timeout(15000) });
+    const res = await fetch(url, { headers, signal: combineSignals(externalSignal, 15000) });
     if (!res.ok) return [];
     const data = await res.json();
 
@@ -220,8 +235,9 @@ export async function fetchBalance(
   balanceEndpoint: string,
   authHeader: string,
   authPrefix: string,
+  externalSignal?: AbortSignal,
 ): Promise<BalanceResult> {
-  if (!balanceEndpoint) return { success: false, balance: null, error: '未配置余额端点' };
+  if (!balanceEndpoint) return { success: false, balance: null, error: 'balanceEndpointNotConfigured' };
 
   const base = baseUrl.replace(/\/+$/, '');
   const ep = balanceEndpoint.startsWith('/') ? balanceEndpoint : `/${balanceEndpoint}`;
@@ -232,7 +248,7 @@ export async function fetchBalance(
   }
 
   try {
-    const res = await fetch(url, { headers, signal: AbortSignal.timeout(10000) });
+    const res = await fetch(url, { headers, signal: combineSignals(externalSignal, 10000) });
     if (!res.ok) return { success: false, balance: null, error: `HTTP ${res.status}` };
     const data = await res.json();
 
@@ -261,7 +277,7 @@ export function shouldRetry(error: string | null, statusCode?: number): boolean 
   if (statusCode && [403, 502, 503, 504].includes(statusCode)) return true;
   if (!error) return false;
   const lower = error.toLowerCase();
-  return ['timeout', 'network', 'fetch', '连接', 'timeout'].some((k) => lower.includes(k));
+  return ['timeout', 'network', 'fetch', '连接'].some((k) => lower.includes(k));
 }
 
 export function getRetryDelay(): number {

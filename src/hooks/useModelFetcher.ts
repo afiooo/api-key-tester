@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { toast } from '@/components/ui/ToastProvider';
+import { toast } from '@/lib/toast';
 import { fetchModels } from '@/services/api/tester';
 
 interface UseModelFetcherOptions {

@@ -5,6 +5,7 @@ import {
   shouldRetry,
   getRetryDelay,
   buildUrlWithAuth,
+  maskUrlSecrets,
   type TestConfig,
   type TestResult,
 } from '@/services/api/tester';
@@ -58,6 +59,7 @@ type WorkerMessage = KeyStatusUpdate | LogEvent | { type: 'TESTING_COMPLETE' } |
 
 let shouldCancel = false;
 let isProcessing = false;
+let currentAbort: AbortController | null = null;
 
 // ── Concurrency engine ────────────────────────────────────────────────
 
@@ -65,32 +67,20 @@ async function processKeysWithConcurrency(
   keys: string[],
   config: StartPayload['config'],
 ): Promise<void> {
+  if (keys.length === 0) return;
   const concurrency = Math.min(config.concurrency || DEFAULT_CONCURRENCY, keys.length);
   const queue = [...keys];
-  const slots: Array<Promise<void> | null> = Array(concurrency).fill(null);
 
-  const fillSlot = (index: number) => {
-    if (queue.length === 0 || shouldCancel) {
-      slots[index] = null;
-      return;
+  // Each worker pulls from the shared queue until it's empty or we're cancelled.
+  // No busy-wait, no re-attaching .then listeners every loop.
+  const runWorker = async (slotIndex: number): Promise<void> => {
+    while (queue.length > 0 && !shouldCancel) {
+      const key = queue.shift()!;
+      await processKeyWithRetry(key, config, slotIndex);
     }
-    const key = queue.shift()!;
-    slots[index] = processKeyWithRetry(key, config, index).then(() => {
-      fillSlot(index);
-    });
   };
 
-  // Fill all slots
-  for (let i = 0; i < concurrency; i++) {
-    fillSlot(i);
-  }
-
-  // Wait for all slots to finish
-  while (slots.some((s) => s !== null) && !shouldCancel) {
-    const active = slots.filter((s): s is Promise<void> => s !== null);
-    if (active.length === 0) break;
-    await Promise.race(active.map((p, i) => p.then(() => i)));
-  }
+  await Promise.all(Array.from({ length: concurrency }, (_, i) => runWorker(i)));
 }
 
 // ── Retry + test engine ───────────────────────────────────────────────
@@ -125,25 +115,25 @@ async function processKeyWithRetry(
 
     try {
       const requestUrl = buildUrl(apiKey, config);
-      const result: TestResult = await testKey(apiKey, config);
+      const result: TestResult = await testKey(apiKey, config, currentAbort?.signal);
 
       // Handle success
       if (result.valid) {
         if (config.provider === 'gemini' && enablePaidDetection) {
-          const paidResult = await testPaidKey(apiKey, config.baseUrl);
+          const paidResult = await testPaidKey(apiKey, config.baseUrl, currentAbort?.signal);
           const isPaid = paidResult.isPaid === true;
           const status: Status = isPaid ? 'paid' : 'valid';
           postMsg({
             type: 'KEY_STATUS_UPDATE',
             payload: { key: apiKey, status, retryCount: attempt, isPaid: paidResult.isPaid, cacheApiStatus: paidResult.cacheApiStatus, statusCode: result.statusCode },
           });
-          postResultLog(apiKey, attempt, isPaid ? '付费密钥' : '免费有效密钥', result, requestUrl, Date.now() - startTime);
+          postResultLog(apiKey, attempt, isPaid ? 'paid key' : 'free valid key', result, requestUrl, Date.now() - startTime);
         } else {
           postMsg({
             type: 'KEY_STATUS_UPDATE',
             payload: { key: apiKey, status: 'valid', retryCount: attempt, statusCode: result.statusCode },
           });
-          postResultLog(apiKey, attempt, '有效密钥', result, requestUrl, Date.now() - startTime);
+          postResultLog(apiKey, attempt, 'valid key', result, requestUrl, Date.now() - startTime);
         }
         return;
       }
@@ -153,7 +143,7 @@ async function processKeyWithRetry(
           type: 'KEY_STATUS_UPDATE',
           payload: { key: apiKey, status: 'rate-limited', retryCount: attempt, error: result.error || 'rateLimited', statusCode: result.statusCode },
         });
-        postResultLog(apiKey, attempt, '速率限制', result, requestUrl, Date.now() - startTime);
+        postResultLog(apiKey, attempt, 'rate limited', result, requestUrl, Date.now() - startTime);
         return;
       }
 
@@ -162,7 +152,7 @@ async function processKeyWithRetry(
           type: 'KEY_STATUS_UPDATE',
           payload: { key: apiKey, status: 'invalid', retryCount: attempt, error: result.error || 'unknown', statusCode: result.statusCode },
         });
-        postResultLog(apiKey, attempt, result.error || '无效密钥', result, requestUrl, Date.now() - startTime);
+        postResultLog(apiKey, attempt, result.error || 'invalid key', result, requestUrl, Date.now() - startTime);
         return;
       }
 
@@ -171,12 +161,15 @@ async function processKeyWithRetry(
           type: 'KEY_STATUS_UPDATE',
           payload: { key: apiKey, status: 'invalid', retryCount: attempt, error: result.error || 'unknown', statusCode: result.statusCode },
         });
-        postResultLog(apiKey, attempt, `失败（已重试${maxRetries}次）: ${result.error}`, result, requestUrl, Date.now() - startTime);
+        postResultLog(apiKey, attempt, `failed (after ${maxRetries} retries): ${result.error}`, result, requestUrl, Date.now() - startTime);
         return;
       }
 
       // Will retry
     } catch (e: unknown) {
+      // External cancel — abort silently. The outer loop will post a 'cancelled'
+      // status on the next iteration.
+      if (currentAbort?.signal.aborted) return;
       const msg = e instanceof Error ? e.message : String(e);
       if (!shouldRetry(msg) || attempt >= maxRetries) {
         postMsg({
@@ -203,7 +196,7 @@ function postResultLog(key: string, attempt: number, message: string, result: Te
       stage: result.valid ? 'final' : 'error',
       attempt,
       message,
-      requestUrl,
+      requestUrl: maskUrlSecrets(requestUrl),
       responseBody: result.responseBody || undefined,
       statusCode: result.statusCode,
       durationMs,
@@ -250,6 +243,7 @@ self.onmessage = async (event: MessageEvent) => {
       }
       isProcessing = true;
       shouldCancel = false;
+      currentAbort = new AbortController();
 
       try {
         const { keys, config } = msg.payload as StartPayload;
@@ -263,6 +257,7 @@ self.onmessage = async (event: MessageEvent) => {
         postMsg({ type: 'LOG_EVENT', payload: { key: '__worker__', stage: 'error', attempt: 0, message: `Worker crash: ${errMsg}` } });
       } finally {
         isProcessing = false;
+        currentAbort = null;
         postMsg({ type: 'TESTING_COMPLETE' });
       }
       break;
@@ -270,6 +265,7 @@ self.onmessage = async (event: MessageEvent) => {
 
     case 'CANCEL_TESTING':
       shouldCancel = true;
+      currentAbort?.abort();
       break;
 
     case 'PING':

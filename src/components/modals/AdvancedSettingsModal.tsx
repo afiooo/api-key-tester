@@ -2,26 +2,16 @@ import { useTranslation } from 'react-i18next';
 import { Modal } from '@/components/ui/Modal';
 import { Slider } from '@/components/ui/Slider';
 import { Toggle } from '@/components/ui/Toggle';
+import type { AdvancedSettings } from '@/types/provider';
 
-export interface AdvancedSettings {
-  concurrency: number;
-  retries: number;
-  verboseLog: boolean;
-  paidCheck: boolean;
-  testEndpoint: string;
-  authHeader: string;
-  authPrefix: string;
-  balanceEndpoint: string;
-}
+export type { AdvancedSettings };
 
 interface AdvancedSettingsModalProps {
   open: boolean;
   onClose: () => void;
   settings: AdvancedSettings;
   onChange: (next: AdvancedSettings) => void;
-  onResetPaidPrompt?: () => void;
   provider?: string;
-  balancePlaceholder?: string;
 }
 
 export function AdvancedSettingsModal({
@@ -29,9 +19,7 @@ export function AdvancedSettingsModal({
   onClose,
   settings,
   onChange,
-  onResetPaidPrompt,
   provider,
-  balancePlaceholder,
 }: AdvancedSettingsModalProps) {
   const { t } = useTranslation();
 
@@ -62,22 +50,11 @@ export function AdvancedSettingsModal({
           onChange={(v) => update('verboseLog', v)}
         />
         {provider === 'gemini' && (
-          <div className="flex flex-col gap-2">
-            <ToggleRow
-              label={t('paidDetection')}
-              checked={settings.paidCheck}
-              onChange={(v) => update('paidCheck', v)}
-            />
-            {onResetPaidPrompt && (
-              <button
-                type="button"
-                onClick={onResetPaidPrompt}
-                className="self-start text-body text-fg-muted hover:text-fg underline cursor-pointer"
-              >
-                {t('paidDetectionSettings.resetPopup')}
-              </button>
-            )}
-          </div>
+          <ToggleRow
+            label={t('paidDetection')}
+            checked={settings.paidCheck}
+            onChange={(v) => update('paidCheck', v)}
+          />
         )}
 
         {/* Balance endpoint */}
@@ -88,7 +65,6 @@ export function AdvancedSettingsModal({
               type="text"
               value={settings.balanceEndpoint || ''}
               onChange={(e) => update('balanceEndpoint', e.target.value)}
-              placeholder={balancePlaceholder || ''}
               className="w-full h-8 px-2 rounded-card border border-border bg-surface text-body text-fg placeholder:text-fg-subtle outline-none focus:border-primary"
             />
           </div>

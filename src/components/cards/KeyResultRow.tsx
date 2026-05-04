@@ -3,6 +3,7 @@ import { Eye, EyeOff, Copy } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/Badge';
 import { cn } from '@/lib/cn';
+import { maskKey } from '@/lib/keyProcessor';
 
 export type KeyStatus = 'valid' | 'invalid' | 'rate-limited' | 'paid' | 'pending' | 'retrying' | 'cancelled';
 
@@ -17,11 +18,6 @@ export interface KeyResult {
 interface KeyResultRowProps {
   data: KeyResult;
   onStatusClick?: (keyId: string) => void;
-}
-
-function maskKey(k: string) {
-  if (k.length <= 8) return k;
-  return `${k.slice(0, 4)}${'*'.repeat(10)}${k.slice(-3)}`;
 }
 
 export function KeyResultRow({ data, onStatusClick }: KeyResultRowProps) {

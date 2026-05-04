@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Button } from '@/components/ui/Button';
 import { KeyResultRow, type KeyResult } from './KeyResultRow';
-import { toast } from '@/components/ui/ToastProvider';
+import { toast } from '@/lib/toast';
 import { cn } from '@/lib/cn';
 
 type Tab = 'all' | 'valid' | 'invalid' | 'rate-limited' | 'paid';

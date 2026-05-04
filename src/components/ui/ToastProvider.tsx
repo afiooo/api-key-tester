@@ -22,5 +22,3 @@ export function ToastProvider() {
     />
   );
 }
-
-export { toast } from 'react-hot-toast';

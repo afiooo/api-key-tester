@@ -25,11 +25,12 @@ interface ConfigState {
   logs: KeyLog[];
 }
 
-export function useApiTester(activeConfigId: string) {
+export function useApiTester(activeConfigId: string | null) {
   const [configStates, setConfigStates] = useState<Record<string, ConfigState>>({});
   const [isTesting, setIsTesting] = useState(false);
 
-  const current = configStates[activeConfigId] ?? { results: [], logs: [] };
+  const stateKey = activeConfigId ?? '__none__';
+  const current = configStates[stateKey] ?? { results: [], logs: [] };
 
   // ── Batching buffers ─────────────────────────────────────────────
 
@@ -37,8 +38,8 @@ export function useApiTester(activeConfigId: string) {
   const logBufferRef = useRef<LogEventPayload[]>([]);
   const rafIdRef = useRef<number | null>(null);
   const lastFlushRef = useRef(0);
-  const activeConfigRef = useRef(activeConfigId);
-  activeConfigRef.current = activeConfigId;
+  const activeConfigRef = useRef(stateKey);
+  activeConfigRef.current = stateKey;
 
   const flushUpdates = useCallback((force = false) => {
     rafIdRef.current = null;
@@ -108,11 +109,6 @@ export function useApiTester(activeConfigId: string) {
     rafIdRef.current = requestAnimationFrame(() => flushUpdates());
   }, [flushUpdates]);
 
-  // Flush remaining on unmount
-  const flushRef = useRef(flushUpdates);
-  flushRef.current = flushUpdates;
-  // We don't need useEffect cleanup since the hook lives for the app lifetime
-
   const setCurrent = useCallback(
     (patch: Partial<ConfigState> | ((prev: ConfigState) => ConfigState)) => {
       setConfigStates((prev) => {
@@ -167,13 +163,11 @@ export function useApiTester(activeConfigId: string) {
     setIsTesting(false);
   }, [flushUpdates]);
 
-  const { startTesting: startWorker, cancelTesting: cancelWorker, isReady } = useWebWorker({
+  const { startTesting: startWorker, cancelTesting: cancelWorker } = useWebWorker({
     onKeyUpdate: handleKeyUpdate,
     onLogEvent: handleLogEvent,
     onComplete: handleComplete,
-  });
-
-  // Start testing for current config
+  });  // Start testing for current config
   const startTesting = useCallback(
     (config: WorkerConfig) => {
       initResults(config.keys);
@@ -185,9 +179,7 @@ export function useApiTester(activeConfigId: string) {
       }
     },
     [initResults, startWorker],
-  );
-
-  // Cancel testing — flush remaining then stop
+  );  // Cancel testing — flush remaining then stop
   const cancelTesting = useCallback(() => {
     cancelWorker();
     if (rafIdRef.current != null) {
@@ -246,7 +238,6 @@ export function useApiTester(activeConfigId: string) {
     results: current.results,
     isTesting,
     logs: current.logs,
-    isReady,
     stats,
     progress,
     startTesting,

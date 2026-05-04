@@ -1,5 +1,5 @@
-import { useRef, useCallback } from 'react';
-import { toast } from '@/components/ui/ToastProvider';
+import { useRef, useCallback, type ChangeEvent } from 'react';
+import { toast } from '@/lib/toast';
 import { extractApiKeys } from '@/lib/keyProcessor';
 
 interface UseFileHandlerOptions {
@@ -15,7 +15,7 @@ export function useFileHandler({ onKeysLoaded, t }: UseFileHandlerOptions) {
   }, []);
 
   const handleFileChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
+    (e: ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
 

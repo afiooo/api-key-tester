@@ -107,20 +107,25 @@
   button {
     font-family: inherit;
   }
-  *::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
   }
-  *::-webkit-scrollbar-thumb {
+  ::-webkit-scrollbar-track {
+    background: var(--color-card);
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb {
     background: var(--color-border);
     border-radius: 999px;
-    border: 2px solid transparent;
-    background-clip: padding-box;
   }
-  *::-webkit-scrollbar-thumb:hover {
+  ::-webkit-scrollbar-thumb:hover {
     background: var(--color-fg-muted);
-    background-clip: padding-box;
-    border: 2px solid transparent;
+  }
+  /* Firefox */
+  html {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border) var(--color-card);
   }
 }
 

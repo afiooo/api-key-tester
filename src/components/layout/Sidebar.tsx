@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { Pencil, Trash2, Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
-import { useConfig } from '@/contexts/ConfigContext';
+import { useConfig } from '@/hooks/useConfig';
 import { DEFAULT_ADVANCED } from '@/constants/defaults';
 import { PROVIDER_PRESETS } from '@/data/providerPresets';
 import { ContextMenu, type ContextMenuItem } from '@/components/ui/ContextMenu';
@@ -242,7 +242,7 @@ export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
   // ═══════════════════════════════════════════════════════════════
 
   const desktopSidebar = (
-    <aside className="hidden lg:flex flex-col w-16 shrink-0 border-r border-border bg-card">
+    <aside className="hidden lg:flex flex-col w-16 shrink-0 border-r border-border bg-card sticky top-16 self-start h-[calc(100vh-4rem)]">
       <div className="flex flex-col items-center gap-1 flex-1 overflow-y-auto px-2 pt-5 pb-[15px]">
         {configs.length === 0 ? (
           <span className="text-fg-subtle text-[11px] text-center leading-tight mt-4">{t('noKeys')}</span>

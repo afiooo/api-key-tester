@@ -10,15 +10,13 @@ import { ProgressCards } from '@/components/cards/ProgressCards';
 import { ResultsCard } from '@/components/cards/ResultsCard';
 import { KeyLogModal } from '@/components/cards/KeyLogModal';
 import { AdvancedSettingsModal, type AdvancedSettings } from '@/components/modals/AdvancedSettingsModal';
-import { PaidDetectionPrompt, shouldShowPaidPrompt, hidePaidPrompt, resetPaidPrompt } from '@/components/cards/PaidDetectionPrompt';
-import { PROVIDER_PRESETS } from '@/data/providerPresets';
-import { useConfig } from '@/contexts/ConfigContext';
+import { useConfig } from '@/hooks/useConfig';
 import { useFileHandler } from '@/hooks/useFileHandler';
 import { useModelFetcher } from '@/hooks/useModelFetcher';
 import { useApiTester } from '@/hooks/useApiTester';
 import { fetchBalance } from '@/services/api/tester';
 import { useLanguage } from '@/hooks/useLanguage';
-import { toast } from '@/components/ui/ToastProvider';
+import { toast } from '@/lib/toast';
 import { DEFAULT_ADVANCED } from '@/constants/defaults';
 import type { KeyLog } from '@/types/log';
 
@@ -36,11 +34,11 @@ export default function App() {
   const {
     results, isTesting, logs, stats, progress,
     startTesting, cancelTesting, clearResults, updateResult,
-  } = useApiTester(activeConfigId ?? 'default');
+  } = useApiTester(activeConfigId);
 
   // ── Local working state ──────────────────────────────────────────
 
-  const [proxyUrl, setProxyUrl] = useState(activeConfig?.proxyUrl ?? '');
+  const [proxyUrl, setProxyUrl] = useState(activeConfig?.proxyUrl || activeConfig?.baseUrl || '');
   const [model, setModel] = useState(activeConfig?.model ?? 'gpt-4o-mini');
   const [keysText, setKeysText] = useState(activeConfig?.apiKeys ?? '');
   const [advanced, setAdvanced] = useState<AdvancedSettings>(
@@ -56,10 +54,6 @@ export default function App() {
   const [logModalOpen, setLogModalOpen] = useState(false);
   const selectedLog: KeyLog | null = logs.find((l) => l.keyId === selectedLogKey) ?? null;
 
-  // ── Paid detection prompt ────────────────────────────────────────
-
-  const [paidPromptOpen, setPaidPromptOpen] = useState(false);
-
   // ── File handler ─────────────────────────────────────────────────
 
   const { fileInputRef, handleFileUpload, handleFileChange, handlePaste } =
@@ -70,15 +64,18 @@ export default function App() {
   const { fetchModels, isFetching: isFetchingModels } = useModelFetcher({ t });
 
   const handleFetchModels = useCallback(async () => {
-    const baseUrl = proxyUrl || activeConfig?.baseUrl || PROVIDER_PRESETS[activeConfig?.provider ?? 'openai']?.defaultBaseUrl || '';
-    if (!baseUrl) { toast.error(t('enterApiKeysFirst')); return; }
+    const baseUrl = (proxyUrl || activeConfig?.baseUrl || '').trim();
+    if (!baseUrl) { toast.error(t('emptyBaseUrl')); return; }
+    const queryParamAuth = activeConfig?.queryParamAuth ?? false;
+    const authHeader = (advanced.authHeader || '').trim();
+    if (!queryParamAuth && !authHeader) { toast.error(t('emptyAuthHeader')); return; }
     // Use first key from the list for auth
     const firstKey = keysText.split('\n').map((l) => l.trim()).filter(Boolean)[0] || '';
     const models = await fetchModels(
       baseUrl, firstKey,
-      advanced.authHeader || 'Authorization',
-      advanced.authPrefix || 'Bearer ',
-      activeConfig?.queryParamAuth ?? false,
+      authHeader,
+      advanced.authPrefix ?? '',
+      queryParamAuth,
     );
     if (models.length > 0) {
       setDetectedModels((prev) => Array.from(new Set([...prev, ...models])));
@@ -86,6 +83,7 @@ export default function App() {
   }, [activeConfig, proxyUrl, keysText, advanced, fetchModels, t]);
 
   const skipSaveRef = useRef(false);
+  const lastConfigIdRef = useRef(activeConfigId);
 
   // ── Auto-select first config ─────────────────────────────────────
 
@@ -93,24 +91,38 @@ export default function App() {
     if (configs.length > 0 && !activeConfigId) {
       setActiveConfig(configs[0].id);
     }
-  }, [configs.length, activeConfigId, setActiveConfig]);
+  }, [configs, activeConfigId, setActiveConfig]);
 
-  // ── Sync config → local on switch ────────────────────────────────
-
+  // ── Sync config → local ──────────────────────────────────────────
+  // Fires both on switch (activeConfigId change) and on content change of the
+  // active config (e.g. user edits it in ConfigEditorModal). Uses primitive
+  // values + a stringified advanced as deps so it doesn't re-fire on identity-only
+  // changes from the reducer.
+  const advancedSig = JSON.stringify(activeConfig?.advanced ?? null);
   useEffect(() => {
     if (activeConfig) {
       skipSaveRef.current = true;
-      setProxyUrl(activeConfig.proxyUrl || '');
+      setProxyUrl(activeConfig.baseUrl || activeConfig.proxyUrl || '');
       setModel(activeConfig.model);
       setKeysText(activeConfig.apiKeys);
       setAdvanced({ ...DEFAULT_ADVANCED, ...(activeConfig.advanced || {}) });
       setIsCustomModel(false);
-      if (activeConfig.provider === 'gemini' && shouldShowPaidPrompt()) {
-        setPaidPromptOpen(true);
+      // Reset detected models only when actually switching to a different config,
+      // not when the same config's content changes (e.g. via ConfigEditorModal).
+      if (lastConfigIdRef.current !== activeConfigId) {
+        setDetectedModels([]);
+        lastConfigIdRef.current = activeConfigId;
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeConfigId]);
+  }, [
+    activeConfigId,
+    activeConfig?.baseUrl,
+    activeConfig?.proxyUrl,
+    activeConfig?.model,
+    activeConfig?.apiKeys,
+    advancedSig,
+  ]);
 
   // ── Debounce-save local → config ─────────────────────────────────
 
@@ -133,32 +145,44 @@ export default function App() {
   const prevTestingRef = useRef(isTesting);
   useEffect(() => {
     const { proxyUrl: pu, activeConfig: ac, advanced: adv, results: res, updateResult: upd } = balanceRef.current;
-    const balanceEp = adv.balanceEndpoint || PROVIDER_PRESETS[ac?.provider ?? 'openai']?.defaultBalanceEndpoint;
-    if (prevTestingRef.current && !isTesting && balanceEp) {
+    const balanceEp = adv.balanceEndpoint;
+    const baseUrl = pu || ac?.baseUrl || '';
+    let abortController: AbortController | null = null;
+
+    if (prevTestingRef.current && !isTesting && balanceEp && baseUrl) {
       const validKeys = res.filter(
         (r) => r.status === 'valid' || r.status === 'paid',
       );
-      if (validKeys.length === 0) return;
+      if (validKeys.length > 0) {
+        abortController = new AbortController();
+        const signal = abortController.signal;
 
-      (async () => {
-        for (const r of validKeys.slice(0, 5)) {
-          try {
-            const result = await fetchBalance(
-              r.key,
-              pu || ac?.baseUrl || PROVIDER_PRESETS[ac?.provider ?? 'openai']?.defaultBaseUrl || '',
-              balanceEp,
-              adv.authHeader,
-              adv.authPrefix,
-            );
-            if (result.success && result.balance) {
-              upd(r.key, { balance: result.balance });
-            }
-          } catch { /* skip */ }
-        }
-      })();
+        (async () => {
+          for (const r of validKeys.slice(0, 5)) {
+            if (signal.aborted) return;
+            try {
+              const result = await fetchBalance(
+                r.key,
+                baseUrl,
+                balanceEp,
+                adv.authHeader,
+                adv.authPrefix,
+                signal,
+              );
+              if (signal.aborted) return;
+              if (result.success && result.balance) {
+                upd(r.key, { balance: result.balance });
+              }
+            } catch { /* skip */ }
+          }
+        })();
+      }
     }
     prevTestingRef.current = isTesting;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+
+    return () => {
+      abortController?.abort();
+    };
   }, [isTesting]);
 
   // ── Handlers ─────────────────────────────────────────────────────
@@ -171,21 +195,28 @@ export default function App() {
     const lines = keysText.split('\n').map((l) => l.trim()).filter(Boolean);
     if (lines.length === 0) { toast.error(t('enterApiKeysFirst')); return; }
 
-    const baseUrl = proxyUrl || activeConfig?.baseUrl || PROVIDER_PRESETS[activeConfig?.provider ?? 'openai']?.defaultBaseUrl || '';
-    const extraHeaders = parseExtraHeaders(activeConfig?.extraHeaders ?? '');
+    const baseUrl = (proxyUrl || activeConfig?.baseUrl || '').trim();
+    if (!baseUrl) { toast.error(t('emptyBaseUrl')); return; }
 
-    const preset = PROVIDER_PRESETS[activeConfig?.provider ?? 'openai'];
+    const endpoint = (advanced.testEndpoint || '').trim();
+    if (!endpoint) { toast.error(t('emptyEndpoint')); return; }
+
+    const queryParamAuth = activeConfig?.queryParamAuth ?? false;
+    const authHeader = (advanced.authHeader || '').trim();
+    if (!queryParamAuth && !authHeader) { toast.error(t('emptyAuthHeader')); return; }
+
+    const extraHeaders = parseExtraHeaders(activeConfig?.extraHeaders ?? '');
 
     startTesting({
       keys: lines,
       config: {
         baseUrl,
-        endpoint: advanced.testEndpoint || preset?.defaultEndpoint || '/chat/completions',
+        endpoint,
         model,
-        authHeader: advanced.authHeader || preset?.defaultAuthHeader || 'Authorization',
-        authPrefix: advanced.authPrefix !== undefined ? advanced.authPrefix : (preset?.defaultAuthPrefix ?? 'Bearer '),
+        authHeader,
+        authPrefix: advanced.authPrefix ?? '',
         extraHeaders,
-        queryParamAuth: activeConfig?.queryParamAuth ?? false,
+        queryParamAuth,
         provider: activeConfig?.provider,
         maxRetries: advanced.retries,
         concurrency: advanced.concurrency,
@@ -222,17 +253,6 @@ export default function App() {
 
   const showPaid = activeConfig?.provider === 'gemini' && advanced.paidCheck;
 
-  const handlePaidConfirm = (dontShowAgain: boolean) => {
-    if (dontShowAgain) hidePaidPrompt();
-    setAdvanced((prev) => ({ ...prev, paidCheck: true }));
-    setPaidPromptOpen(false);
-  };
-
-  const handleAdvancedResetPaidPrompt = () => {
-    resetPaidPrompt();
-    toast.success(t('paidDetectionSettings.resetDescription'));
-  };
-
   return (
     <AppShell>
       <input ref={fileInputRef} type="file" accept=".txt" className="hidden" onChange={handleFileChange} />
@@ -251,7 +271,6 @@ export default function App() {
             onCustomize={() => setIsCustomModel((v) => !v)}
             onFetchModels={handleFetchModels}
             isFetchingModels={isFetchingModels}
-            baseUrlPlaceholder={activeConfig?.baseUrl || PROVIDER_PRESETS[activeConfig?.provider ?? 'openai']?.defaultBaseUrl}
           />
           <KeyListCard value={keysText} onChange={setKeysText} onUpload={handleFileUpload} onCopy={handlePaste} />
           <ActionButtons isTesting={isTesting} onStart={handleStart} onDedupe={handleDedupe} onClear={handleClear} />
@@ -273,15 +292,7 @@ export default function App() {
       <AdvancedSettingsModal
         open={advancedOpen} onClose={() => setAdvancedOpen(false)}
         settings={advanced} onChange={setAdvanced}
-        onResetPaidPrompt={handleAdvancedResetPaidPrompt}
         provider={activeConfig?.provider}
-        balancePlaceholder={PROVIDER_PRESETS[activeConfig?.provider ?? 'openai']?.defaultBalanceEndpoint}
-      />
-
-      <PaidDetectionPrompt
-        open={paidPromptOpen}
-        onConfirm={handlePaidConfirm}
-        onCancel={() => setPaidPromptOpen(false)}
       />
 
       {advanced.verboseLog && (

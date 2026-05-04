@@ -1,47 +1,9 @@
 /**
- * Deduplicate and clean API keys from a raw text block.
- */
-export function deduplicateAndCleanKeys(text: string): string[] {
-  return Array.from(
-    new Set(
-      text
-        .split('\n')
-        .map((l) => l.trim())
-        .filter(Boolean),
-    ),
-  );
-}
-
-/**
- * Parse raw text into an array of non-empty lines.
- */
-export function parseApiKeysText(text: string): string[] {
-  return text
-    .split('\n')
-    .map((l) => l.trim())
-    .filter(Boolean);
-}
-
-/**
  * Mask a key for display: show first 4 + last 3 chars, fill middle with *.
  */
 export function maskKey(k: string): string {
   if (k.length <= 8) return k;
   return `${k.slice(0, 4)}${'*'.repeat(10)}${k.slice(-3)}`;
-}
-
-/**
- * Count keys grouped by status.
- */
-export function countKeysByStatus(
-  results: { status: string }[],
-): { total: number; valid: number; invalid: number; rateLimited: number } {
-  return {
-    total: results.length,
-    valid: results.filter((r) => r.status === 'valid' || r.status === 'paid').length,
-    invalid: results.filter((r) => r.status === 'invalid').length,
-    rateLimited: results.filter((r) => r.status === 'rate-limited').length,
-  };
 }
 
 /**

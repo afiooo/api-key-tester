@@ -1,6 +1,4 @@
 import {
-  createContext,
-  useContext,
   useReducer,
   useEffect,
   useState,
@@ -9,6 +7,7 @@ import {
 import type { ProviderConfig, ProviderType } from '@/types/provider';
 import { PROVIDER_PRESETS } from '@/data/providerPresets';
 import { DEFAULT_ADVANCED } from '@/constants/defaults';
+import { ConfigContext, type ConfigContextValue } from '@/hooks/useConfig';
 
 // ── State ──────────────────────────────────────────────────────────
 
@@ -150,18 +149,8 @@ function reducer(state: ConfigState, action: Action): ConfigState {
 
 // ── Context ────────────────────────────────────────────────────────
 
-interface ConfigContextValue {
-  configs: ProviderConfig[];
-  activeConfigId: string | null;
-  activeConfig: ProviderConfig | null;
-  addConfig: (provider: ProviderType, name: string) => string;
-  updateConfig: (id: string, data: Partial<ProviderConfig>) => void;
-  deleteConfig: (id: string) => void;
-  setActiveConfig: (id: string) => void;
-  isBuiltin: (id: string) => boolean;
-}
-
-const ConfigContext = createContext<ConfigContextValue | null>(null);
+// ConfigContext, ConfigContextValue, and useConfig live in ./configContext
+// to keep this file as a component-only module (Vite Fast-Refresh friendly).
 
 // ── Provider ───────────────────────────────────────────────────────
 
@@ -233,12 +222,4 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
   return (
     <ConfigContext.Provider value={value}>{children}</ConfigContext.Provider>
   );
-}
-
-// ── Hook ───────────────────────────────────────────────────────────
-
-export function useConfig(): ConfigContextValue {
-  const ctx = useContext(ConfigContext);
-  if (!ctx) throw new Error('useConfig must be used within ConfigProvider');
-  return ctx;
 }

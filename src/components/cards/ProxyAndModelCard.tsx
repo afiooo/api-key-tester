@@ -19,7 +19,6 @@ interface ProxyAndModelCardProps {
   onCustomize?: () => void;
   onFetchModels?: () => void;
   isFetchingModels?: boolean;
-  baseUrlPlaceholder?: string;
 }
 
 export function ProxyAndModelCard({
@@ -34,7 +33,6 @@ export function ProxyAndModelCard({
   onCustomize,
   onFetchModels,
   isFetchingModels,
-  baseUrlPlaceholder,
 }: ProxyAndModelCardProps) {
   const { t } = useTranslation();
   const presetList = (presetModels || PROVIDER_PRESETS[providerType]?.modelOptions.join(', ') || '')
@@ -58,7 +56,6 @@ export function ProxyAndModelCard({
             id="proxy-url"
             value={proxyUrl}
             onChange={(e) => onProxyUrlChange(e.target.value)}
-            placeholder={baseUrlPlaceholder || 'https://api.openai.com/v1'}
           />
         </div>
 
