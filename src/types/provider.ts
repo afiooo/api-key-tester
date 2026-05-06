@@ -5,7 +5,10 @@ export type ProviderType =
   | 'deepseek'
   | 'siliconcloud'
   | 'xai'
-  | 'openrouter';
+  | 'openrouter'
+  | 'moonshot'
+  | 'qwen'
+  | 'doubao';
 
 export interface AdvancedSettings {
   concurrency: number;

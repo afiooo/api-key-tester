@@ -47,7 +47,7 @@ export function ContextMenu({ items, position, onClose }: ContextMenuProps) {
   return (
     <div
       ref={ref}
-      className="fixed z-[9999] min-w-[140px] rounded-card border border-border bg-bg shadow-popover overflow-hidden py-1"
+      className="fixed z-[var(--z-popover)] min-w-[140px] rounded-card border border-border bg-canvas shadow-popover overflow-hidden py-1"
       style={{ left: position.x, top: position.y }}
     >
       {items.map((item, i) => (
@@ -62,7 +62,7 @@ export function ContextMenu({ items, position, onClose }: ContextMenuProps) {
             'w-full flex items-center gap-2 px-3 py-2 text-btn text-left cursor-pointer transition-colors',
             item.danger
               ? 'text-error hover:bg-error-soft'
-              : 'text-fg hover:bg-card',
+              : 'text-fg hover:bg-hover',
           )}
         >
           {item.icon && <span className="w-4 h-4 flex items-center justify-center shrink-0">{item.icon}</span>}

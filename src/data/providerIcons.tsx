@@ -8,6 +8,8 @@ interface SvgIconProps {
 export function SvgIcon({ children, viewBox = '0 0 24 24' }: SvgIconProps) {
   return (
     <svg
+      aria-hidden="true"
+      focusable="false"
       height="16"
       viewBox={viewBox}
       width="16"

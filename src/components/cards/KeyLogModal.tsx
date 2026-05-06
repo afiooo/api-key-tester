@@ -46,7 +46,7 @@ export function KeyLogModal({ open, onClose, log }: KeyLogModalProps) {
                 </div>
               )}
               {event.responseBody && (
-                <pre className="text-body text-fg font-mono text-xs whitespace-pre-wrap break-all bg-bg rounded p-2 max-h-[200px] overflow-y-auto">
+                <pre className="text-body text-fg font-mono text-xs whitespace-pre-wrap break-all bg-canvas rounded p-2 max-h-[200px] overflow-y-auto">
                   {formatJson(event.responseBody)}
                 </pre>
               )}

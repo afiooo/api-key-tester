@@ -6,6 +6,7 @@ import { useConfig } from '@/hooks/useConfig';
 import { DEFAULT_ADVANCED } from '@/constants/defaults';
 import { PROVIDER_PRESETS } from '@/data/providerPresets';
 import { ContextMenu, type ContextMenuItem } from '@/components/ui/ContextMenu';
+import { Tooltip } from '@/components/ui/Tooltip';
 import { ConfigEditorModal, type ConfigEditorData } from '@/components/modals/ConfigEditorModal';
 import type { ProviderConfig } from '@/types/provider';
 
@@ -133,51 +134,35 @@ export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
     const active = cfg.id === activeConfigId;
 
     return (
-      <div
-        key={cfg.id}
-        onClick={() => setActiveConfig(cfg.id)}
-        onContextMenu={(e) => handleRightClick(e, cfg)}
-        title={cfg.name}
-        className={cn(
-          'flex items-center justify-center p-2 rounded-[6px] cursor-pointer',
-          'border border-transparent transition-colors',
-          active
-            ? 'text-fg font-semibold'
-            : 'text-fg-muted hover:text-fg',
-        )}
-        style={
-          active
-            ? {
-                background: 'var(--sidebar-active-bg)',
-                borderColor: 'var(--sidebar-active-border)',
-                boxShadow: 'var(--sidebar-active-shadow)',
-              }
-            : {
-                background: 'transparent',
-              }
-        }
-        onMouseEnter={(e) => {
-          if (!active) {
-            (e.currentTarget as HTMLElement).style.background = 'var(--sidebar-hover-bg)';
-            (e.currentTarget as HTMLElement).style.borderColor = 'var(--sidebar-hover-border)';
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (!active) {
-            (e.currentTarget as HTMLElement).style.background = 'transparent';
-            (e.currentTarget as HTMLElement).style.borderColor = 'transparent';
-          }
-        }}
-      >
-        <span
+      <Tooltip key={cfg.id} content={cfg.name} side="right">
+        <div
+          onClick={() => setActiveConfig(cfg.id)}
+          onContextMenu={(e) => handleRightClick(e, cfg)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setActiveConfig(cfg.id);
+            }
+          }}
+          role="button"
+          tabIndex={0}
+          aria-label={cfg.name}
+          aria-current={active ? 'page' : undefined}
           className={cn(
-            'flex items-center justify-center w-[20px] h-[20px] shrink-0',
-            active ? 'opacity-100' : 'opacity-70',
+            'sidebar-item justify-center p-2',
+            active ? 'is-active text-fg font-semibold' : 'text-fg-muted hover:text-fg',
           )}
         >
-          {preset.icon}
-        </span>
-      </div>
+          <span
+            className={cn(
+              'flex items-center justify-center w-[20px] h-[20px] shrink-0',
+              active ? 'opacity-100' : 'opacity-70',
+            )}
+          >
+            {preset.icon}
+          </span>
+        </div>
+      </Tooltip>
     );
   };
 
@@ -197,32 +182,14 @@ export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
           onMobileClose?.();
         }}
         onContextMenu={(e) => handleRightClick(e, cfg)}
+        role="button"
+        tabIndex={0}
+        aria-label={cfg.name}
+        aria-current={active ? 'page' : undefined}
         className={cn(
-          'flex items-center gap-3 px-3 py-2 rounded-[6px] cursor-pointer border border-transparent transition-colors',
-          active ? 'font-semibold' : 'font-medium hover:text-fg',
+          'sidebar-item gap-3 px-3 py-2',
+          active ? 'is-active text-fg font-semibold' : 'text-fg-muted hover:text-fg font-medium',
         )}
-        style={
-          active
-            ? {
-                background: 'var(--sidebar-active-bg)',
-                borderColor: 'var(--sidebar-active-border)',
-                boxShadow: 'var(--sidebar-active-shadow)',
-                color: 'var(--color-fg)',
-              }
-            : { color: 'var(--color-fg-muted)' }
-        }
-        onMouseEnter={(e) => {
-          if (!active) {
-            (e.currentTarget as HTMLElement).style.background = 'var(--sidebar-hover-bg)';
-            (e.currentTarget as HTMLElement).style.borderColor = 'var(--sidebar-hover-border)';
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (!active) {
-            (e.currentTarget as HTMLElement).style.background = 'transparent';
-            (e.currentTarget as HTMLElement).style.borderColor = 'transparent';
-          }
-        }}
       >
         <span
           className={cn(
@@ -232,7 +199,7 @@ export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
         >
           {preset.icon}
         </span>
-        <span className="flex-1 truncate text-[13px]">{cfg.name}</span>
+        <span className="flex-1 truncate text-meta">{cfg.name}</span>
       </div>
     );
   };
@@ -245,7 +212,7 @@ export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
     <aside className="hidden lg:flex flex-col w-16 shrink-0 border-r border-border bg-card sticky top-16 self-start h-[calc(100vh-4rem)]">
       <div className="flex flex-col items-center gap-1 flex-1 overflow-y-auto px-2 pt-5 pb-[15px]">
         {configs.length === 0 ? (
-          <span className="text-fg-subtle text-[11px] text-center leading-tight mt-4">{t('noKeys')}</span>
+          <span className="text-fg-subtle text-caption text-center leading-tight mt-4">{t('noKeys')}</span>
         ) : (
           configs.map(renderConfigIcon)
         )}
@@ -256,21 +223,15 @@ export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
 
       {/* New config button */}
       <div className="flex justify-center py-[15px]">
-        <button
-          onClick={() => openEditor()}
-          className="flex items-center justify-center w-9 h-9 rounded-[6px] text-fg-muted border border-transparent hover:text-fg transition-colors cursor-pointer"
-          title={t('addProvider')}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLElement).style.background = 'var(--sidebar-hover-bg)';
-            (e.currentTarget as HTMLElement).style.borderColor = 'var(--sidebar-hover-border)';
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLElement).style.background = 'transparent';
-            (e.currentTarget as HTMLElement).style.borderColor = 'transparent';
-          }}
-        >
-          <Plus size={16} strokeWidth={2} />
-        </button>
+        <Tooltip content={t('addProvider')} side="right">
+          <button
+            onClick={() => openEditor()}
+            aria-label={t('addProvider')}
+            className="sidebar-item justify-center w-9 h-9 text-fg-muted hover:text-fg"
+          >
+            <Plus size={16} strokeWidth={2} />
+          </button>
+        </Tooltip>
       </div>
     </aside>
   );
@@ -280,8 +241,8 @@ export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
   // ═══════════════════════════════════════════════════════════════
 
   const mobileSidebar = isMobileOpen && (
-    <div className="fixed inset-0 z-50 lg:hidden">
-      <div className="absolute inset-0 bg-black/40" onClick={onMobileClose} />
+    <div className="fixed inset-0 z-[var(--z-overlay)] lg:hidden">
+      <div className="absolute inset-0 bg-overlay" onClick={onMobileClose} />
 
       <aside className="relative w-[160px] h-full bg-card border-r border-border flex flex-col py-5 px-3">
         <div className="flex-1 overflow-y-auto">
@@ -300,15 +261,7 @@ export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
               openEditor();
               onMobileClose?.();
             }}
-            className="flex items-center justify-center gap-1.5 w-full h-8 rounded-[6px] text-btn text-fg-muted border border-transparent hover:text-fg transition-colors cursor-pointer font-medium"
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.background = 'var(--sidebar-hover-bg)';
-              (e.currentTarget as HTMLElement).style.borderColor = 'var(--sidebar-hover-border)';
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLElement).style.background = 'transparent';
-              (e.currentTarget as HTMLElement).style.borderColor = 'transparent';
-            }}
+            className="sidebar-item justify-center gap-1.5 w-full h-8 text-btn text-fg-muted hover:text-fg font-medium"
           >
             <Plus size={14} strokeWidth={2} />
             {t('addProvider')}

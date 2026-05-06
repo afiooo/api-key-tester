@@ -13,7 +13,7 @@ interface State {
 function ErrorFallback({ onRefresh }: { onRefresh: () => void }) {
   const { t } = useTranslation();
   return (
-    <div className="min-h-screen flex items-center justify-center bg-bg">
+    <div className="min-h-screen flex items-center justify-center bg-canvas">
       <div className="flex flex-col items-center gap-6 p-8 rounded-card border border-border bg-card max-w-md mx-4">
         <div className="w-12 h-12 rounded-full bg-error-soft flex items-center justify-center">
           <span className="text-error text-xl font-bold">!</span>

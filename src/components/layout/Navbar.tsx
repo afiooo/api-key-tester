@@ -35,7 +35,7 @@ export function Navbar({ onMenuClick }: NavbarProps) {
         <button
           type="button"
           onClick={onMenuClick}
-          className="lg:hidden flex items-center justify-center w-9 h-9 rounded-card text-fg hover:bg-bg cursor-pointer transition-colors"
+          className="lg:hidden flex items-center justify-center w-9 h-9 rounded-card text-fg hover:bg-hover cursor-pointer transition-colors"
           aria-label={t('ui.expandSidebar')}
         >
           <Menu size={20} strokeWidth={2} />
@@ -53,7 +53,7 @@ export function Navbar({ onMenuClick }: NavbarProps) {
           href="https://github.com/weiruchenai1/api-key-tester"
           target="_blank"
           rel="noopener noreferrer"
-          className="hidden sm:inline-flex h-9 w-9 items-center justify-center rounded-card text-fg hover:bg-bg transition-colors"
+          className="hidden sm:inline-flex h-9 w-9 items-center justify-center rounded-card text-fg hover:bg-hover transition-colors"
           aria-label="GitHub"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -64,7 +64,7 @@ export function Navbar({ onMenuClick }: NavbarProps) {
 
         <Dropdown
           trigger={
-            <span className="inline-flex items-center gap-2 h-9 px-2 rounded-card hover:bg-bg transition-colors text-fg">
+            <span className="inline-flex items-center gap-2 h-9 px-2 rounded-card hover:bg-hover transition-colors text-fg">
               <Globe size={20} strokeWidth={2} />
               <span className="hidden sm:inline text-btn font-bold">
                 {langLabel[lang]}
@@ -102,7 +102,7 @@ export function Navbar({ onMenuClick }: NavbarProps) {
 
         <Dropdown
           trigger={
-            <span className="inline-flex items-center justify-center h-9 w-9 rounded-card hover:bg-bg transition-colors text-fg">
+            <span className="inline-flex items-center justify-center h-9 w-9 rounded-card hover:bg-hover transition-colors text-fg">
               {actual === 'dark' ? (
                 <Moon size={20} strokeWidth={2} />
               ) : (

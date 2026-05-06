@@ -41,7 +41,7 @@ export function Dropdown({
       {open && (
         <div
           className={cn(
-            'absolute z-50 mt-2 min-w-[150px] rounded-card border border-border bg-bg shadow-popover',
+            'absolute z-[var(--z-dropdown)] mt-2 min-w-[150px] rounded-card border border-border bg-canvas shadow-popover',
             'overflow-hidden',
             align === 'right' ? 'right-0' : 'left-0',
             panelClassName,
@@ -77,7 +77,7 @@ export function DropdownItem({
         'w-full flex items-center justify-between gap-3 px-2 py-2 text-btn cursor-pointer transition-colors',
         active
           ? 'bg-primary-soft text-primary'
-          : 'text-fg hover:bg-black/[0.06] dark:hover:bg-white/[0.08]',
+          : 'text-fg hover:bg-hover',
       )}
     >
       <span className="flex items-center gap-2">

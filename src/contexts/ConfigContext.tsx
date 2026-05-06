@@ -21,7 +21,7 @@ const ACTIVE_KEY = 'active_config_id';
 
 const BUILTIN_TYPES: ProviderType[] = [
   'openai', 'claude', 'gemini', 'deepseek',
-  'siliconcloud', 'xai', 'openrouter',
+  'siliconcloud', 'xai', 'openrouter', 'moonshot',
 ];
 
 function createBuiltinConfigs(): ProviderConfig[] {

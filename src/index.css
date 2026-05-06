@@ -3,7 +3,7 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --font-sans: 'Microsoft YaHei', 'PingFang SC', 'Segoe UI', system-ui, sans-serif;
+  --font-sans: system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', 'Segoe UI', sans-serif;
 
   --text-h1: 20px;
   --text-h1--line-height: 24px;
@@ -13,8 +13,12 @@
   --text-body--line-height: 20px;
   --text-btn: 14px;
   --text-btn--line-height: 16px;
+  --text-meta: 13px;
+  --text-meta--line-height: 16px;
+  --text-caption: 11px;
+  --text-caption--line-height: 14px;
 
-  --color-bg: #f9f8f4;
+  --color-canvas: #f9f8f4;
   --color-card: #f8f9fa;
   --color-surface: #ffffff;
 
@@ -24,6 +28,10 @@
   --color-on-primary: #ffffff;
 
   --color-border: #e5e5ea;
+
+  /* 中性悬停 / 按下叠加层（半透明） */
+  --color-hover: rgba(0, 0, 0, 0.06);
+  --color-active: rgba(0, 0, 0, 0.10);
 
   --color-primary: #007aff;
   --color-primary-soft: #e5f2ff;
@@ -43,23 +51,35 @@
 
   --color-track: #e6e6e6;
   --color-knob: #2c2c2c;
+  --color-knob-raised: #ffffff;
+  --color-overlay: rgba(0, 0, 0, 0.4);
 
   --shadow-card: 0 1px 2px rgba(17, 17, 17, 0.04);
   --shadow-popover: 0 8px 24px rgba(17, 17, 17, 0.12);
   --shadow-modal: 0 20px 48px rgba(17, 17, 17, 0.18);
 
-  --radius-card: 8px;
+  --radius-control: 6px;   /* 按钮、列表项 */
+  --radius-card: 8px;      /* 卡片、弹层 */
 
-  /* Sidebar 样式（GitHub 风格灰色调） */
-  --sidebar-active-bg: linear-gradient(135deg, rgba(175,184,193,0.1) 0%, rgba(175,184,193,0.18) 100%);
-  --sidebar-active-border: rgba(175,184,193,0.3);
-  --sidebar-active-shadow: 0 0 0 1px rgba(175,184,193,0.15);
-  --sidebar-hover-bg: rgba(175,184,193,0.12);
-  --sidebar-hover-border: rgba(175,184,193,0.2);
+  /* 层级（语义化 z-index） */
+  --z-sticky: 10;
+  --z-dropdown: 20;
+  --z-overlay: 30;
+  --z-modal: 40;
+  --z-popover: 50;
+  --z-tooltip: 60;
+
+  /* Sidebar 配色基底 */
+  --sidebar-tone: 175 184 193;
+  --sidebar-active-bg: linear-gradient(135deg, rgb(var(--sidebar-tone) / 0.1) 0%, rgb(var(--sidebar-tone) / 0.18) 100%);
+  --sidebar-active-border: rgb(var(--sidebar-tone) / 0.3);
+  --sidebar-active-shadow: 0 0 0 1px rgb(var(--sidebar-tone) / 0.15);
+  --sidebar-hover-bg: rgb(var(--sidebar-tone) / 0.12);
+  --sidebar-hover-border: rgb(var(--sidebar-tone) / 0.2);
 }
 
 .dark {
-  --color-bg: #1c1c1e;
+  --color-canvas: #1c1c1e;
   --color-card: #2c2c2e;
   --color-surface: #2c2c2e;
 
@@ -69,6 +89,9 @@
 
   --color-border: #3a3a3a;
 
+  --color-hover: rgba(255, 255, 255, 0.08);
+  --color-active: rgba(255, 255, 255, 0.14);
+
   --color-primary-soft: rgba(0, 122, 255, 0.16);
   --color-success-soft: rgba(52, 199, 89, 0.18);
   --color-error-soft: rgba(255, 59, 48, 0.18);
@@ -77,12 +100,7 @@
   --color-track: #3a3a3a;
   --color-knob: #ffffff;
 
-  /* Sidebar 暗色主题 */
-  --sidebar-active-bg: linear-gradient(135deg, rgba(110,118,129,0.12) 0%, rgba(110,118,129,0.2) 100%);
-  --sidebar-active-border: rgba(110,118,129,0.3);
-  --sidebar-active-shadow: 0 0 0 1px rgba(110,118,129,0.15);
-  --sidebar-hover-bg: rgba(110,118,129,0.12);
-  --sidebar-hover-border: rgba(110,118,129,0.2);
+  --sidebar-tone: 110 118 129;
 }
 
 @layer base {
@@ -93,7 +111,7 @@
     height: 100%;
   }
   body {
-    background: var(--color-bg);
+    background: var(--color-canvas);
     color: var(--color-fg);
     font-family: var(--font-sans);
     font-size: var(--text-body);
@@ -126,6 +144,27 @@
   html {
     scrollbar-width: thin;
     scrollbar-color: var(--color-border) var(--color-card);
+  }
+}
+
+@layer components {
+  /* Sidebar 列表项基础样式 */
+  .sidebar-item {
+    display: flex;
+    align-items: center;
+    border: 1px solid transparent;
+    border-radius: var(--radius-control);
+    cursor: pointer;
+    transition: background-color 150ms, border-color 150ms, color 150ms;
+  }
+  .sidebar-item:not(.is-active):hover {
+    background: var(--sidebar-hover-bg);
+    border-color: var(--sidebar-hover-border);
+  }
+  .sidebar-item.is-active {
+    background: var(--sidebar-active-bg);
+    border-color: var(--sidebar-active-border);
+    box-shadow: var(--sidebar-active-shadow);
   }
 }
 

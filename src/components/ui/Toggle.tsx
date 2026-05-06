@@ -23,7 +23,7 @@ export function Toggle({ checked, onChange, label, className }: ToggleProps) {
     >
       <span
         className={cn(
-          'inline-block h-[18px] w-[18px] transform rounded-full bg-white shadow transition-transform',
+          'inline-block h-[18px] w-[18px] transform rounded-full bg-knob-raised shadow transition-transform',
           checked ? 'translate-x-[19px]' : 'translate-x-[3px]',
         )}
       />

@@ -10,7 +10,7 @@ interface KeyListCardProps {
 }
 
 const iconButtonClass =
-  'shrink-0 inline-flex items-center justify-center w-7 h-7 rounded border border-border bg-surface text-fg-muted hover:text-fg hover:bg-bg cursor-pointer transition-colors';
+  'shrink-0 inline-flex items-center justify-center w-7 h-7 rounded border border-border bg-surface text-fg-muted hover:text-fg hover:bg-hover cursor-pointer transition-colors';
 
 export function KeyListCard({ value, onChange, onUpload, onCopy }: KeyListCardProps) {
   const { t } = useTranslation();

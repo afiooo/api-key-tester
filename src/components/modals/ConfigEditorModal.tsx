@@ -10,10 +10,7 @@ import type { ProviderConfig, ProviderType } from '@/types/provider';
 import { PROVIDER_PRESETS } from '@/data/providerPresets';
 import { toast } from '@/lib/toast';
 
-const PROVIDER_TYPES: ProviderType[] = [
-  'openai', 'claude', 'gemini', 'deepseek',
-  'siliconcloud', 'xai', 'openrouter',
-];
+const PROVIDER_TYPES = Object.keys(PROVIDER_PRESETS) as ProviderType[];
 
 export interface ConfigEditorData {
   name: string;

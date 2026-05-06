@@ -39,7 +39,7 @@ export function LogsPreviewPanel({ logs, onSelectKey }: LogsPreviewPanelProps) {
               onClick={() => onSelectKey(l.keyId)}
               className={cn(
                 'flex items-center gap-2 px-3 py-2 rounded-card text-left transition-colors cursor-pointer',
-                'text-body text-fg hover:bg-bg',
+                'text-body text-fg hover:bg-hover',
               )}
             >
               <span
