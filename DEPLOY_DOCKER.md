@@ -4,7 +4,6 @@
 
 ## 📂 项目目录
 ```
-api-key-tester/
 ├── Dockerfile
 ├── docker-compose.yml
 ├── .dockerignore
@@ -23,7 +22,7 @@ docker compose version
 ```
 
 ## 2. 构建与启动
-进入项目目录 `api-key-tester/`：
+进入项目目录后执行：
 ```bash
 docker compose up -d --build
 ```
@@ -39,7 +38,7 @@ docker compose up -d --build   # 更新
 ```
 
 ## 4. 配置
-默认端口：`8080:80`  
+默认端口：`8080:80`
 如需修改，编辑 `docker-compose.yml`：
 ```yaml
 ports:
@@ -51,12 +50,12 @@ ports:
   ```nginx
   try_files $uri $uri/ /index.html;
   ```
-- **白屏/资源 404** → 确认 `package.json` 中 `"homepage": "."`
+- **白屏/资源 404** → 确认构建产物在 `dist/` 目录
 - **端口冲突** → 修改 `docker-compose.yml` 的 `ports`
 - **构建慢** → 配置 npm 镜像源或代理
 
 ## 6. 服务器部署
-将 `api-key-tester/` 上传服务器后执行：
+将项目文件上传服务器后执行：
 ```bash
 docker compose up -d --build
 ```

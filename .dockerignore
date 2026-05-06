@@ -1,5 +1,5 @@
 node_modules
-build
+dist
 .git
 .gitignore
 Dockerfile
@@ -9,9 +9,9 @@ yarn.lock
 .cache
 .DS_Store
 coverage
-.nyc_output
 *.log
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+*.tsbuildinfo
