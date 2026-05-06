@@ -7,6 +7,7 @@ import { DEFAULT_ADVANCED } from '@/constants/defaults';
 import { PROVIDER_PRESETS } from '@/data/providerPresets';
 import { ContextMenu, type ContextMenuItem } from '@/components/ui/ContextMenu';
 import { Tooltip } from '@/components/ui/Tooltip';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { ConfigEditorModal, type ConfigEditorData } from '@/components/modals/ConfigEditorModal';
 import type { ProviderConfig } from '@/types/provider';
 
@@ -33,6 +34,7 @@ export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
   const [ctxMenu, setCtxMenu] = useState<CtxState | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingConfig, setEditingConfig] = useState<ProviderConfig | undefined>();
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   // ── Handlers ──────────────────────────────────────────────────────
 
@@ -43,11 +45,9 @@ export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
 
   const handleCtxDelete = useCallback(
     (id: string) => {
-      if (window.confirm(t('modal.confirmDelete'))) {
-        deleteConfig(id);
-      }
+      setConfirmDeleteId(id);
     },
-    [deleteConfig, t],
+    [],
   );
 
   const handleEditorSave = useCallback(
@@ -297,6 +297,18 @@ export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
           config={editingConfig}
         />
       )}
+
+      <ConfirmDialog
+        open={confirmDeleteId !== null}
+        danger
+        title={t('modal.deleteConfig')}
+        message={t('modal.confirmDelete')}
+        onConfirm={() => {
+          if (confirmDeleteId) deleteConfig(confirmDeleteId);
+          setConfirmDeleteId(null);
+        }}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
     </>
   );
 }

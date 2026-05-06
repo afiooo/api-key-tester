@@ -15,6 +15,7 @@ export function UsageNote() {
         <ul className="text-body text-primary leading-5 space-y-0.5">
           <li>{t('usage1')}</li>
           <li>{t('usage2')}</li>
+          <li>{t('usage3')}</li>
         </ul>
       </div>
     </Card>

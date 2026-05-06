@@ -8,6 +8,7 @@ import type { ProviderConfig, ProviderType } from '@/types/provider';
 import { PROVIDER_PRESETS } from '@/data/providerPresets';
 import { DEFAULT_ADVANCED } from '@/constants/defaults';
 import { ConfigContext, type ConfigContextValue } from '@/hooks/useConfig';
+import { encrypt, decrypt, isEncrypted } from '@/lib/crypto';
 
 // ── State ──────────────────────────────────────────────────────────
 
@@ -18,6 +19,7 @@ interface ConfigState {
 
 const STORAGE_KEY = 'provider_configs';
 const ACTIVE_KEY = 'active_config_id';
+const encryptedApiKeys = new Map<string, string>();
 
 const BUILTIN_TYPES: ProviderType[] = [
   'openai', 'claude', 'gemini', 'deepseek',
@@ -62,7 +64,7 @@ function loadState(): ConfigState {
       const merged = builtins.map((b) => {
         const saved_ = savedMap.get(b.provider);
         if (!saved_) return b;
-        return {
+        const cfg = {
           ...b,
           ...saved_,
           id: b.id,
@@ -71,11 +73,24 @@ function loadState(): ConfigState {
           extraHeaders: saved_.extraHeaders ?? b.extraHeaders,
           queryParamAuth: saved_.queryParamAuth ?? b.queryParamAuth,
         };
+        if (isEncrypted(cfg.apiKeys)) {
+          encryptedApiKeys.set(cfg.id, cfg.apiKeys);
+          cfg.apiKeys = '';
+        }
+        return cfg;
       });
 
       // Add user-created configs (those whose provider isn't a builtin type, or extra ones)
       const savedIds = new Set(builtins.map((b) => b.provider));
-      const userConfigs = saved.filter((c) => !savedIds.has(c.provider as ProviderType));
+      const userConfigs = saved
+        .filter((c) => !savedIds.has(c.provider as ProviderType))
+        .map((c) => {
+          if (isEncrypted(c.apiKeys)) {
+            encryptedApiKeys.set(c.id, c.apiKeys);
+            return { ...c, apiKeys: '' };
+          }
+          return c;
+        });
 
       const configs = [...merged, ...userConfigs];
       const activeConfigId = localStorage.getItem(ACTIVE_KEY);
@@ -158,10 +173,38 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, undefined, loadState);
   const [ready, setReady] = useState(false);
 
-  // Persist to localStorage (skip initial sync)
+  // Decrypt apiKeys on first mount
+  useEffect(() => {
+    if (encryptedApiKeys.size === 0) return;
+    const entries = Array.from(encryptedApiKeys.entries());
+    encryptedApiKeys.clear();
+    Promise.all(
+      entries.map(async ([id, value]) => {
+        const decrypted = await decrypt(value);
+        return { id, apiKeys: decrypted };
+      }),
+    ).then((results) => {
+      for (const r of results) {
+        if (r.apiKeys) {
+          dispatch({ type: 'UPDATE', payload: { id: r.id, data: { apiKeys: r.apiKeys } } });
+        }
+      }
+    });
+  }, []);
+
+  // Persist to localStorage (skip initial sync), encrypting apiKeys
   useEffect(() => {
     if (!ready) { setReady(true); return; }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state.configs));
+    async function persist() {
+      const configsToSave = await Promise.all(
+        state.configs.map(async (c) => ({
+          ...c,
+          apiKeys: c.apiKeys ? await encrypt(c.apiKeys) : '',
+        })),
+      );
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(configsToSave));
+    }
+    persist();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.configs]);
 
